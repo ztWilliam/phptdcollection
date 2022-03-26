@@ -1,0 +1,12 @@
+{
+	"name": "wztztech/phptdcollection",
+	"description": "",
+	"require": {
+		"yurunsoft/yurun-http": "^4.3.0"
+	},
+    "autoload": {
+        "psr-4" : {
+			"WztzTech\\Iot\\PhpTd" : "./src"
+        }
+	}
+}
