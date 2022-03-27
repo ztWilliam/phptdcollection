@@ -2,6 +2,6 @@
 
 namespace WztzTech\Iot\PhpTd\Connector;
 
-interface IPHPTdResult{
+interface ITdResult{
     
 }

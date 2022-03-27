@@ -6,7 +6,7 @@
 	},
     "autoload": {
         "psr-4" : {
-			"WztzTech\\Iot\\PhpTd" : "./src"
+			"WztzTech\\Iot\\PhpTd\\" : "./src/"
         }
 	}
 }
