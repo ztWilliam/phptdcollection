@@ -8,7 +8,7 @@ use WztzTech\Iot\PhpTd\Enum\BaseEnum;
  * 类型说明来自 tdengine 官方文档：
  * 原文链接： https://www.taosdata.com/docs/cn/v2.0/taos-sql#
  */
-class TdDataType extends BaseEnum
+abstract class TdDataType extends BaseEnum
 {
     /**
      * 布尔型，{true, false}
