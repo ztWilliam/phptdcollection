@@ -18,7 +18,9 @@ interface ITdConnection{
      * 
      * @return ITdConnection | null 若连接成功，返回一个 ITdConnection对象，若连接失败，则返回null
      */
-    public static function connect(String $host, String $port, String $user, String $pass, String $defaultDb = '', array $options = []);
+    public static function connect(
+        String $host, String $port, String $user, String $pass, 
+        String $defaultDb = '', array $options = []) : ITdConnection;
 
     /**
      * 销毁连接相关信息，
