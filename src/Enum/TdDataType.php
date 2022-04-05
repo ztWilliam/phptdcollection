@@ -4,7 +4,7 @@ namespace WztzTech\Iot\PhpTd\Enum;
 use WztzTech\Iot\PhpTd\Enum\BaseEnum;
 
 /**
- * tdengine 支持的数据类型 枚举类。
+ * tdengine 支持的 数据类型 枚举类。
  * 类型说明来自 tdengine 官方文档：
  * 原文链接： https://www.taosdata.com/docs/cn/v2.0/taos-sql#
  */
