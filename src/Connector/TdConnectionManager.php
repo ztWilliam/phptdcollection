@@ -33,7 +33,13 @@ class TdConnectionManager {
     public String $pass = '';
     public String $default_db = '';
 
-    public function getConnection(array $options = []) {
+    /**
+     * 获取一个 tdengine connection 对象。
+     * 
+     * @param array $options 需要初始化的选项
+     * @param object $client tdengine 的客户端连接器，默认值为null，仅当外部想传入一个已有的client时（例如“连接池资源共享”）才需要赋值，否则不需要传参
+     */
+    public function getConnection(array $options = [], object $client = null) {
         $connObj = null;
         $className = empty($this->connector_class) ? self::DEFAULT_CONNECTOR_CLASS : $this->connector_class;
         try {
@@ -56,7 +62,8 @@ class TdConnectionManager {
                 empty($this->user) ? self::DEFAULT_USER : $this->user,
                 empty($this->pass) ? self::DEFAULT_PASS : $this->pass,
                 empty($this->default_db) ? self::DEFAULT_DB : $this->default_db,
-                $options
+                $options,
+                $client
             );
 
         } else {

@@ -15,12 +15,13 @@ interface ITdConnection{
      * @param String $pass 密码
      * @param String $defaultDb 默认Db Name，可选
      * @param array $options 可通过 Key-Value 数组，对连接选项进行初始化
+     * @param object $tdClient tdengine 的客户端连接器，默认值为null，仅当外部想传入一个已有的client时（例如“连接池资源共享”）才需要赋值，否则不需要传参
      * 
      * @return ITdConnection | null 若连接成功，返回一个 ITdConnection对象，若连接失败，则返回null
      */
     public static function connect(
         String $host, String $port, String $user, String $pass, 
-        String $defaultDb = '', array $options = []) : ITdConnection;
+        String $defaultDb = '', array $options = [], object $tdClient = null) : ITdConnection;
 
     /**
      * 销毁连接相关信息，

@@ -19,7 +19,6 @@ class TdConnectionManagerTest extends TestCase {
         $connObj = $manager->getConnection();
 
         self::assertTrue($connObj instanceof RestfulTdConnection );        
-
     }
 
     /**
@@ -38,6 +37,9 @@ class TdConnectionManagerTest extends TestCase {
 
     }
 
+    /**
+     * 测试传入的类并不是 ITdConnection 接口的实现类 的情况
+     */
     public function testConnectorReflectionWithInvalidInterface() {
         $className = 'WztzTech\Iot\PhpTd\Connector\Restful\RestfulTdQueryResult';
 
@@ -46,6 +48,8 @@ class TdConnectionManagerTest extends TestCase {
 
         $this->expectException(PhpTdException::class);
         $this->expectExceptionCode(ErrorCode::REFLECTION_ERR_INVALID_INTERFACE);
+        $this->expectExceptionMessage(sprintf(ErrorMessage::REFLECTION_ERR_INVALID_INTERFACE_MESSAGE, $className, 'ITdConnection'));
+
         $manager->getConnection();
 
     }
