@@ -33,7 +33,7 @@ class TdConnectionManager {
     public String $pass = '';
     public String $default_db = '';
 
-    public function getConnection() {
+    public function getConnection(array $options = []) {
         $connObj = null;
         $className = empty($this->connector_class) ? self::DEFAULT_CONNECTOR_CLASS : $this->connector_class;
         try {
@@ -50,19 +50,19 @@ class TdConnectionManager {
 
             $connectMethod = $connClass->getMethod(self::CONNECT_METHOD_NAME);
 
-            $connObj = $connectMethod->invoke( null, 
+            $connObj = $connectMethod->invoke( null, //因为 connect 是静态方法，所以实例参数传 null 即可
                 empty($this->host) ? self::DEFAULT_HOST : $this->host,
                 empty($this->port) ? self::DEFAULT_PORT : $this->port,
                 empty($this->user) ? self::DEFAULT_USER : $this->user,
                 empty($this->pass) ? self::DEFAULT_PASS : $this->pass,
-                empty($this->host) ? self::DEFAULT_HOST : $this->host,
                 empty($this->default_db) ? self::DEFAULT_DB : $this->default_db,
+                $options
             );
 
         } else {
-            //说明 ClassName 所指定的类，并未实现 ITdConnection 接口，需要报错：
+            //“没有 connect 方法”，说明 ClassName 所指定的类，并未实现 ITdConnection 接口，需要报错：
             throw new PhpTdException(
-                sprintf(ErrorMessage::REFLECTION_ERR_INVALID_INTERFACE_MESSAGE, 'ITdConnection') , 
+                sprintf(ErrorMessage::REFLECTION_ERR_INVALID_INTERFACE_MESSAGE, $className, 'ITdConnection') , 
                 ErrorCode::REFLECTION_ERR_INVALID_INTERFACE);
         }
 

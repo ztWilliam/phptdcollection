@@ -4,9 +4,18 @@
 	"require": {
 		"yurunsoft/yurun-http": "^4.3.0"
 	},
+	"require-dev": {
+        "phpunit/phpunit": ">=8"
+	},
     "autoload": {
         "psr-4" : {
 			"WztzTech\\Iot\\PhpTd\\" : "./src/"
         }
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"WztzTech\\Iot\\PhpTd\\Test\\" : "./test/"
+		}
 	}
+
 }
