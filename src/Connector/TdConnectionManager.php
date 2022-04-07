@@ -39,7 +39,7 @@ class TdConnectionManager {
      * @param array $options 需要初始化的选项
      * @param object $client tdengine 的客户端连接器，默认值为null，仅当外部想传入一个已有的client时（例如“连接池资源共享”）才需要赋值，否则不需要传参
      */
-    public function getConnection(array $options = [], object $client = null) {
+    public function getConnection(array $options = [], object &$client = null) {
         $connObj = null;
         $className = empty($this->connector_class) ? self::DEFAULT_CONNECTOR_CLASS : $this->connector_class;
         try {

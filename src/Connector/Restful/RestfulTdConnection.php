@@ -24,6 +24,8 @@ class RestfulTdConnection implements ITdConnection {
     private $port = '';
     private $defaultDb = '';
 
+    private $connected = False;
+
     private HttpClient $client;
 
     private $options = [
@@ -82,6 +84,7 @@ class RestfulTdConnection implements ITdConnection {
         //登录成功后，将获取的 authCode 存入新的对象
         if ($response->code == 0) {
             $newConn->authCode = $response->desc;
+            $newConn->connected = True;
         } else {
             //登录失败，将错误信息一并抛出
             throw new PhpTdException(
@@ -100,7 +103,12 @@ class RestfulTdConnection implements ITdConnection {
      * 
      */
     public function close() : void {
+        $this->host = '';
+        $this->port = '';
+        $this->authCode = '';
+        $this->defaultDb = '';
 
+        $this->connected = False;
     }
 
     /**
@@ -128,6 +136,7 @@ class RestfulTdConnection implements ITdConnection {
      * @return ITdConnection 将自身对象返回，以便支持 -> 链式调用
      */
     public function withOptions(array $options) : ITdConnection {
+        $this->options = array_merge($this->options, $options);
         return $this;
     }
 
