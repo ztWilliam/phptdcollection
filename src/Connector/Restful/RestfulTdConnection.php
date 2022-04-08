@@ -19,6 +19,31 @@ class RestfulTdConnection implements ITdConnection {
      */
     const CONNECTION_STRING_TEMPLATE = "%s:%s/rest/login/%s/%s";
 
+    /**
+     * 执行命令（无论查询类的还是写入类的）时用到的url
+     * 时间返回格式为 TdTimeFormat::LOCAL_TIME 类型的
+     * 参数依次为：host, port 
+     */
+    const EXEC_SQL_URL_TEMPLATE = "%s:%s/rest/sql";
+
+    /**
+     * 时间返回格式为 TdTimeFormat::TIME_STAMP 类型的，
+     * 其余同 EXEC_SQL_URL_TEMPLATE
+     */
+    const EXEC_SQLT_URL_TEMPLATE = "%s:%s/rest/sqlt";
+
+    /**
+     * 时间返回格式为 TdTimeFormat::UTC_TIME 类型的，
+     * 其余同 EXEC_SQL_URL_TEMPLATE
+     */
+    const EXEC_SQLUTC_URL_TEMPLATE = "%s:%s/rest/sqlutc";
+
+    /**
+     * 执行命令时，需在header中添加的身份认证信息
+     * 参数为 authCode
+     */
+    const EXEC_HEADER_TEMPLATE = "Taosd %s";
+
     private $authCode = '';
     private $host = '';
     private $port = '';
@@ -67,9 +92,9 @@ class RestfulTdConnection implements ITdConnection {
                 $url, HttpClient::METHOD_GET, [], '', [], null, null, null, 
                 [HttpClient::RESULT_OPTION_JSON] );
             
-        } catch(\Throwable $th) {
+        } catch(\Throwable $ex) {
             throw new PhpTdException(
-                sprintf(ErrorMessage::NETWORK_CONNECT_ERR_MESSAGE, $th->getMessage()),
+                sprintf(ErrorMessage::NETWORK_CONNECT_ERR_MESSAGE, $ex->getMessage()),
                 ErrorCode::NETWORK_CONNECT_ERR
             );
         }
@@ -151,7 +176,71 @@ class RestfulTdConnection implements ITdConnection {
      * @return ITdResult
      */
     public function exec(String $taosql, String $dbName = '') : ITdResult {
-        return RestfulTdResult::parseResult('');
+
+        //当前的连接状态是否是“已连接”？
+        if(!$this->connected) {
+            throw new PhpTdException(
+                ErrorMessage::TD_ENGINE_CONNECTION_CLOSED_ERR_MESSAGE,
+                ErrorCode::TD_ENGINE_CONNECTION_CLOSED_ERR
+            );
+        }
+
+        if (empty($taosql)) {
+            throw new PhpTdException(
+                ErrorMessage::TD_TAOS_SQL_EMPTY_ERR_MESSAGE,
+                ErrorCode::TD_TAOS_SQL_EMPTY_ERR
+            );
+        }
+
+        //构造url（考虑options 和 defaultDb）
+        switch ($this->options['RESULT_TIME_FORMAT']) {
+            case TdTimeFormat::LOCAL_TIME :
+                $url = sprintf(self::EXEC_SQL_URL_TEMPLATE, $this->host, $this->port);
+                break;
+            case TdTimeFormat::TIME_STAMP :
+                $url = sprintf(self::EXEC_SQLT_URL_TEMPLATE, $this->host, $this->port);
+                break;
+            case TdTimeFormat::UTC_TIME :
+                $url = sprintf(self::EXEC_SQLUTC_URL_TEMPLATE, $this->host, $this->port);
+                break;
+            default :
+                $url = sprintf(self::EXEC_SQL_URL_TEMPLATE, $this->host, $this->port);
+        }
+
+        //检查是否需要添加db的选项
+        $db = empty($dbName) ? $this->defaultDb : $dbName;
+        if(!empty($db)) {
+            $url = $url . '/' . $db;
+        }
+
+        //通过 tdClient 发送命令到 tdengine 服务端
+        try {
+            $response = $this->client->send(
+                $url,
+                HttpClient::METHOD_POST,
+                [
+                    'Authorization' => sprintf(self::EXEC_HEADER_TEMPLATE, $this->authCode),
+                ],
+                $taosql, 
+                [], null, null, null, 
+                [HttpClient::RESULT_OPTION_JSON]
+            );
+    
+        } catch (\Throwable $ex) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::NETWORK_CONNECT_ERR_MESSAGE, $ex->getMessage()),
+                ErrorCode::NETWORK_CONNECT_ERR
+            );
+        }
+
+        if (is_null($response)) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::NETWORK_CONNECT_ERR_MESSAGE, '结果为空'),
+                ErrorCode::NETWORK_CONNECT_ERR
+            );
+        }
+
+        return RestfulTdResult::parseResult(json_encode($response));
     }
 
     /**
@@ -166,6 +255,5 @@ class RestfulTdConnection implements ITdConnection {
     public function query(String $taosql, String $dbName = '') : ITdQueryResult {
         return RestfulTDQueryResult::parseResult('');
     }
-
 
 }

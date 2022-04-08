@@ -11,4 +11,8 @@ class ErrorCode {
 
     const TD_ENGINE_LOGIN_ERR = -300;
 
+    const TD_ENGINE_CONNECTION_CLOSED_ERR = -301;
+
+    const TD_TAOS_SQL_EMPTY_ERR = -401;
+
 }

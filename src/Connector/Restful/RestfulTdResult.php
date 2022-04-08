@@ -12,6 +12,10 @@ class RestfulTdResult implements ITdResult {
      * @return ITdResult 任何实现 ITdResult 或其派生接口的对象实例，不允许返回null
      */
     public static function parseResult(String $result) : ITdResult {
+
+        echo PHP_EOL . "raw result is " . PHP_EOL;
+        echo $result;
+
         return new RestfulTdResult();
     }
 

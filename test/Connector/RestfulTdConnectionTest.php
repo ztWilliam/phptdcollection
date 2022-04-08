@@ -4,12 +4,37 @@ namespace WztzTech\Iot\PhpTd\Test\Connector;
 use PHPUnit\Framework\TestCase;
 
 use WztzTech\Iot\PhpTd\Connector\TdConnectionManager;
-use WztzTech\Iot\PhpTd\Connector\Restful\RestfulTdConnection;
+use WztzTech\Iot\PhpTd\Connector\Restful\{RestfulTdConnection, RestfulTdResult, RestfulTDQueryResult};
 
 use WztzTech\Iot\PhpTd\Exception\{PhpTdException, ErrorCode, ErrorMessage};
 use WztzTech\Iot\PhpTd\Util\HttpClient;
 
 class RestfulTdConnectionTest extends TestCase {
+
+    /**
+     * 不通过mock执行命令的测试
+     * 适用于 tdengine 服务可用时的测试，测试程序是否真正能运行。
+     * 
+     * 在 tdengine 服务不可用时，建议将本测试跳过
+     */
+    public function testExec_CreateDb_Without_Mock() {
+        //当在 tdengine 服务不可用时，可打开注释
+        // $this->markTestSkipped();
+
+        //创建一个用来模拟 tdengine 返回数据的对象
+        $connManager = new TdConnectionManager();
+
+        $conn = $connManager->getConnection([]);
+
+        $result = $conn->exec('create database if not exists lin_test keep 365 days 30 update 2');
+
+        //检查 $result 是否正确：
+        $this->assertTrue($result instanceof RestfulTdResult);
+        $this->assertEquals(0, $result->rowsAffected());
+        
+        $conn->close();
+
+    }
 
     public function testExec_CreateDb() {
         //创建一个用来模拟 tdengine 返回数据的对象
@@ -36,7 +61,9 @@ class RestfulTdConnectionTest extends TestCase {
         $result = $conn->exec('create database if not exists lin_test keep 365 days 30 update 2');
 
         //检查 $result 是否正确：
-
-        $this->markTestIncomplete();
+        $this->assertTrue($result instanceof RestfulTdResult);
+        $this->assertEquals(0, $result->rowsAffected());
+        
+        $conn->close();
     }
 }
