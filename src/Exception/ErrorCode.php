@@ -15,4 +15,6 @@ class ErrorCode {
 
     const TD_TAOS_SQL_EMPTY_ERR = -401;
 
+    const TD_TAOS_SQL_RESULT_NULL_ERR = -404;
+
 }

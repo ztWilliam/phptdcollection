@@ -1,22 +1,56 @@
 <?php
 namespace WztzTech\Iot\PhpTd\Connector\Restful;
 
+use PHPUnit\Util\Json;
 use WztzTech\Iot\PhpTd\Connector\{ITdResult};
+use WztzTech\Iot\PhpTd\Exception\{ErrorCode, ErrorMessage};
+use WztzTech\Iot\PhpTd\Exception\PhpTdException;
 
 class RestfulTdResult implements ITdResult {
+
+    const TD_SUCC_TAG = "succ";
+
+    protected $lastIsError = false;
+    protected $lastStatus = '';
+    protected $lastErrorCode = 0;
+    protected $lastDesc = '';
+    protected $lastRows = 0;
+
+    protected $lastRawResult = '';
+
+    protected function __construct(object $jsonResult) {
+        $this->lastStatus = $jsonResult->status;
+
+        $this->lastIsError = ($jsonResult->status == self::TD_SUCC_TAG) ? false : true ;
+
+        $this->lastErrorCode = \property_exists($jsonResult, 'code') ? $jsonResult->code : 0;
+        
+        $this->lastDesc = \property_exists($jsonResult, 'desc') ? $jsonResult->desc : '' ;
+
+        $this->lastRows = \property_exists($jsonResult, 'rows') ? $jsonResult->rows : 0 ;
+
+        $this->lastRawResult = json_encode($jsonResult);
+    }
+
     /**
      * 解析 tdengine 服务端执行命令后返回的结果，并转化为 ITdResult 类型的对象。
      * 
-     * @param String $result 
+     * @param String $result 必须是有效的json字符串
      * 
      * @return ITdResult 任何实现 ITdResult 或其派生接口的对象实例，不允许返回null
      */
     public static function parseResult(String $result) : ITdResult {
 
-        echo PHP_EOL . "raw result is " . PHP_EOL;
-        echo $result;
+        if (is_null($result)) {
+            throw new PhpTdException(
+                ErrorMessage::TD_TAOS_SQL_RESULT_NULL_ERR_MESSAGE,
+                ErrorCode::TD_TAOS_SQL_RESULT_NULL_ERR
+            );
+        }
 
-        return new RestfulTdResult();
+        $jsonResult = json_decode($result, false);
+
+        return new static($jsonResult);
     }
 
     /**
@@ -25,7 +59,7 @@ class RestfulTdResult implements ITdResult {
      * @return bool 若为 True，表示本次的执行结果有错误返回，若为 False，表示本次执行无错误。
      */
     public function hasError() : bool {
-        return false;
+        return $this->lastIsError;
     }
 
     /**
@@ -37,7 +71,7 @@ class RestfulTdResult implements ITdResult {
      * @return String
      */
     public function getStatus() : String {
-        return 'succ';
+        return $this->lastStatus;
     }
 
     /**
@@ -50,7 +84,7 @@ class RestfulTdResult implements ITdResult {
      * @return int
      */
     public function getErrorCode() : int {
-        return 0;
+        return $this->lastErrorCode;
     }
 
     /**
@@ -61,7 +95,7 @@ class RestfulTdResult implements ITdResult {
      * @return String
      */
     public function getDesc() : String {
-        return '';
+        return $this->lastDesc;
     }
 
     /**
@@ -71,7 +105,7 @@ class RestfulTdResult implements ITdResult {
      * @return int
      */
     public function rowsAffected() : int {
-        return 0;
+        return $this->lastRows;
     }
 
     /**
@@ -81,7 +115,7 @@ class RestfulTdResult implements ITdResult {
      * @return String 原始结果，原则上应与 parseResult 时传入的 String 相同。
      */
     public function rawResult() : String {
-        return '';
+        return $this->lastRawResult;
     }
 
 

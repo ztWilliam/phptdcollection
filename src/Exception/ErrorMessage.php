@@ -13,4 +13,6 @@ class ErrorMessage {
     const TD_ENGINE_CONNECTION_CLOSED_ERR_MESSAGE = "tdengine 连接已关闭";
 
     const TD_TAOS_SQL_EMPTY_ERR_MESSAGE = "没有要执行的 taos sql 命令";
+
+    const TD_TAOS_SQL_RESULT_NULL_ERR_MESSAGE = "taos sql 结果为空。必须是有效的json字符串";
 }

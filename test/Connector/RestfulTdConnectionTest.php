@@ -26,7 +26,7 @@ class RestfulTdConnectionTest extends TestCase {
 
         $conn = $connManager->getConnection([]);
 
-        $result = $conn->exec('create database if not exists lin_test keep 365 days 30 update 2');
+        $result = $conn->exec('create database lin_test keep 365 days 30 update 2');
 
         //检查 $result 是否正确：
         $this->assertTrue($result instanceof RestfulTdResult);
@@ -62,7 +62,7 @@ class RestfulTdConnectionTest extends TestCase {
 
         //检查 $result 是否正确：
         $this->assertTrue($result instanceof RestfulTdResult);
-        $this->assertEquals(0, $result->rowsAffected());
+        $this->assertEquals(1, $result->rowsAffected());
         
         $conn->close();
     }
