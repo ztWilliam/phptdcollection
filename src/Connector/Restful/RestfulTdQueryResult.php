@@ -3,7 +3,58 @@ namespace WztzTech\Iot\PhpTd\Connector\Restful;
 
 use WztzTech\Iot\PhpTd\Connector\{ITdResult, ITdQueryResult};
 
-class RestfulTDQueryResult implements ITdQueryResult {
+use WztzTech\Iot\PhpTd\Exception\{ErrorCode, ErrorMessage, PhpTdException};
+
+class RestfulTDQueryResult extends RestfulTdResult implements ITdQueryResult {
+
+    /**
+     * 结果集中，所有列名的数组，顺序与原结果一致
+     */
+    private $fieldNames = [];
+
+    /**
+     * 结果集中，各列的属性
+     * 以 FieldName => [FieldMeta] 为键值对 的数组
+     * 其中，FieldMeta 至少包含 type 和 length 两个键 
+     */
+    private $fieldInfos = [];
+
+    /**
+     * 结果集中的所有数据行，只包含数据，不包含列名
+     * 每一行的数据顺序，与 $fieldNames 中的列名顺序一致。
+     */
+    private $allData = [];
+
+    private function fillFieldInfo($column_meta) {
+        for ($i = 0; $i < count($column_meta); $i ++) {
+            $column_name = $column_meta[$i][0];
+            $this->fieldNames[$i] = $column_name;
+
+            $this->fieldInfos[$column_name] = [
+                'name' => $column_name,
+                'type' => $column_meta[$i][1],
+                'length' => $column_meta[$i][2],
+            ];
+        }
+    }
+
+    private function fillData($data) {
+        $this->allData = $data;
+    }
+
+    protected function __construct(object $jsonResult) 
+    {
+        parent::__construct($jsonResult);
+
+        if (\property_exists($jsonResult, 'column_meta')) {
+            $this->fillFieldInfo($jsonResult->column_meta);
+        }
+
+        if (\property_exists($jsonResult, 'data')) {
+            $this->fillData($jsonResult->data);
+        }
+    }
+
     /**
      * 解析 tdengine 服务端执行命令后返回的结果，并转化为 ITdResult 类型的对象。
      * 
@@ -12,72 +63,14 @@ class RestfulTDQueryResult implements ITdQueryResult {
      * @return ITdResult 任何实现 ITdResult 或其派生接口的对象实例，不允许返回null
      */
     public static function parseResult(String $result) : ITdResult {
-        return new RestfulTdQueryResult();
-    }
+        if (is_null($result)) {
+            throw new PhpTdException(
+                ErrorMessage::TD_TAOS_SQL_RESULT_NULL_ERR_MESSAGE,
+                ErrorCode::TD_TAOS_SQL_RESULT_NULL_ERR
+            );
+        }
 
-    /**
-     * 本结果是否执行失败。
-     * 
-     * @return bool 若为 True，表示本次的执行结果有错误返回，若为 False，表示本次执行无错误。
-     */
-    public function hasError() : bool {
-        return false;
-    }
-
-    /**
-     * Status 只有是 'succ' 时，表示执行成功，其他值都表示执行失败。
-     * 当 tdengine 正常返回 status 时，该值即为 tdengine 返回的 status；
-     * 当 tdengine 无法正常返回 status 时（例如网络错误或其他未知错误等），该值统一为 'failed' 。
-     * 
-     * 
-     * @return String
-     */
-    public function getStatus() : String {
-        return 'succ';
-    }
-
-    /**
-     * 获取错误码，通过错误码可以获取真实错误信息，便于追踪调试。
-     * 
-     * 当错误码为 0 时，表示无错误；
-     * 当错误码 > 0 时，表示该错误码是 tdengine 返回的错误码
-     * 当错误码 < 0 时，表示该错误码是本组件内产生的错误
-     * 
-     * @return int
-     */
-    public function getErrorCode() : int {
-        return 0;
-    }
-
-    /**
-     * 获取返回结果的描述信息，
-     * 当有错误发生时，描述信息中可能含有错误的描述；
-     * 当没有错误发生时，可能有些有价值的 tdengine 返回的结果，也会出现在 desc 中（所以别忽视desc）。
-     * 
-     * @return String
-     */
-    public function getDesc() : String {
-        return '';
-    }
-
-    /**
-     * 获取命令执行后影响了多少行数据。
-     * 通常用于写入数据的命令执行后的验证，默认值为 0.
-     * 
-     * @return int
-     */
-    public function rowsAffected() : int {
-        return 0;
-    }
-
-    /**
-     * 获得调用 tdengine 服务端，执行命令后返回的原始结果。
-     * 便于调用者从原始结果中获取更丰富的信息
-     * 
-     * @return String 原始结果，原则上应与 parseResult 时传入的 String 相同。
-     */
-    public function rawResult() : String {
-        return '';
+        return new static(json_decode($result, false));
     }
 
     /**
@@ -87,7 +80,7 @@ class RestfulTDQueryResult implements ITdQueryResult {
      * @return array
      */
     public function allFields() : array {
-        return [];
+        return clone $this->fieldNames;
     }
 
     /**
@@ -101,7 +94,7 @@ class RestfulTDQueryResult implements ITdQueryResult {
      * @return int
      */
     public function fieldType(String $fieldName) : int {
-        return 0;
+        return $this->fieldInfos[$fieldName]['type'];
     }
 
     /**
@@ -116,7 +109,7 @@ class RestfulTDQueryResult implements ITdQueryResult {
      * @return int
      */
     public function fieldLength(String $fieldName) : int {
-        return 0;
+        return $this->fieldInfos[$fieldName]['length'];
     }
 
     /**
@@ -132,9 +125,7 @@ class RestfulTDQueryResult implements ITdQueryResult {
      * @return array 结果集形如：[[FieldValue1, FieldValue2, ..., FieldValueN],[],...,[]]
      */
     public function fetchDataRows(int $fromIndex = 0, int $count = 0) : array {
-        return [
-            [], []
-        ];
+        return array_slice($this->allData, $fromIndex, $count, false);
     }
 
     /**
@@ -146,9 +137,14 @@ class RestfulTDQueryResult implements ITdQueryResult {
      * @return array 结果形如： [FieldName1 => FieldValue1, FieldName2 => FieldValue2, ...]
      */
     public function fetchDataRow(int $rowIndex) : array {
-        return [
-            'field1' => 0,
-        ];
+        $dataRow = array_slice($this->allData, $rowIndex, 1);
+
+        $result = [];
+        for ($i = 0; $i < count($this->fieldNames); $i ++) {
+            $result[$this->fieldNames[$i]] = $dataRow[0][$i];
+        }
+
+        return $result;
     }
 
     /**
@@ -160,7 +156,9 @@ class RestfulTDQueryResult implements ITdQueryResult {
      * @return 指定行列上的值
      */
     public function getFieldValue(int $rowIndex, String $fieldName) {
-        return null;
+        $theRow = $this->fetchDataRow($rowIndex);
+
+        return $theRow[$fieldName];
     }
 
 

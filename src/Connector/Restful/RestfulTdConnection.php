@@ -1,6 +1,7 @@
 <?php
 namespace WztzTech\Iot\PhpTd\Connector\Restful;
 
+use PhpParser\Node\Expr\Cast\String_;
 use WztzTech\Iot\PhpTd\Util\HttpClient;
 
 use WztzTech\Iot\PhpTd\Enum\TdTimeFormat;
@@ -177,6 +178,27 @@ class RestfulTdConnection implements ITdConnection {
      */
     public function exec(String $taosql, String $dbName = '') : ITdResult {
 
+        $response = $this->execTaosSql($taosql, $dbName);
+
+        return RestfulTdResult::parseResult($response);
+    }
+
+    /**
+     * 执行查询类的命令
+     * 
+     * @param String $taosql 要执行的 taos sql 命令
+     * @param String $dbName 可选的，当前这条命令作用于哪个db。若不指定，则使用默认db。 
+     * （注意：这里指定的dbName并不会修改连接器的默认db，只影响本次执行所影响的db）
+     * 
+     * @return ITdQueryResult
+     */
+    public function query(String $taosql, String $dbName = '') : ITdQueryResult {
+        $response = $this->execTaosSql($taosql, $dbName);
+        
+        return RestfulTDQueryResult::parseResult($response);
+    }
+
+    private function execTaosSql(String $taosql, String $dbName = '') : String {
         //当前的连接状态是否是“已连接”？
         if(!$this->connected) {
             throw new PhpTdException(
@@ -240,20 +262,7 @@ class RestfulTdConnection implements ITdConnection {
             );
         }
 
-        return RestfulTdResult::parseResult(json_encode($response));
-    }
-
-    /**
-     * 执行查询类的命令
-     * 
-     * @param String $taosql 要执行的 taos sql 命令
-     * @param String $dbName 可选的，当前这条命令作用于哪个db。若不指定，则使用默认db。 
-     * （注意：这里指定的dbName并不会修改连接器的默认db，只影响本次执行所影响的db）
-     * 
-     * @return ITdQueryResult
-     */
-    public function query(String $taosql, String $dbName = '') : ITdQueryResult {
-        return RestfulTDQueryResult::parseResult('');
+        return json_encode($response);
     }
 
 }
