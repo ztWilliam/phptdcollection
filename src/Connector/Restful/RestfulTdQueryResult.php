@@ -160,6 +160,4 @@ class RestfulTDQueryResult extends RestfulTdResult implements ITdQueryResult {
 
         return $theRow[$fieldName];
     }
-
-
 }

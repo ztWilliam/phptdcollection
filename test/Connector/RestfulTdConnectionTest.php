@@ -19,7 +19,7 @@ class RestfulTdConnectionTest extends TestCase {
      */
     public function testExec_CreateDb_Without_Mock() {
         //当在 tdengine 服务不可用时，可打开注释，跳过此测试
-        // $this->markTestSkipped();
+        $this->markTestSkipped();
 
         //创建一个用来模拟 tdengine 返回数据的对象
         $connManager = new TdConnectionManager();
@@ -102,7 +102,7 @@ class RestfulTdConnectionTest extends TestCase {
 
     public function testQuery_Select_WithoutMock() {
         //当在 tdengine 服务不可用时，可打开注释，跳过此测试
-        // $this->markTestSkipped();
+        $this->markTestSkipped();
 
         //创建一个用来模拟 tdengine 返回数据的对象
         $connManager = new TdConnectionManager();
