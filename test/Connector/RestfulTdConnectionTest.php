@@ -96,6 +96,22 @@ class RestfulTdConnectionTest extends TestCase {
         $this->assertEquals(11, $result->rowsAffected());
         $this->assertEquals("2022-03-22 08:59:09.389024", $result->getFieldValue(2, 'ts'));
         $this->assertEquals(2, $result->fieldType('level'));
+
+        //获取单行数据时，超出行数上限（边界值 11 ）获取数据行，应有相应的异常抛出（而不是系统异常或错误）：
+        $this->expectException(PhpTdException::class);
+        $result->fetchDataRow(11);  
+
+        //获取多行数据时，行号超出范围，应抛出异常：
+        $this->expectException(PhpTdException::class);
+        $this->expectExceptionCode(ErrorCode::RESULT_ROW_INDEX_OUT_OF_RANGE_ERR);
+        $result->fetchDataRows(-2, 10);
+
+        $someRows = $result->fetchDataRows(2, 5);
+        $this->assertEquals(5, count($someRows));
+        $this->assertEquals("2022-03-22 08:59:09.391720", $someRows[1][0]);
+        
+        $otherRows = $result->fetchDataRows(7, 10);
+        $this->assertEquals(4, count($otherRows));
         
         $conn->close();
     }

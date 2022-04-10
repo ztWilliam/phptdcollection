@@ -15,4 +15,6 @@ class ErrorMessage {
     const TD_TAOS_SQL_EMPTY_ERR_MESSAGE = "没有要执行的 taos sql 命令";
 
     const TD_TAOS_SQL_RESULT_NULL_ERR_MESSAGE = "taos sql 结果为空。必须是有效的json字符串";
+
+    const RESULT_ROW_INDEX_OUT_OF_RANGE_ER_MESSAGE = "数据行号 %s 超出范围：[%s, %s]";
 }

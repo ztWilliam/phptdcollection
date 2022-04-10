@@ -125,6 +125,17 @@ class RestfulTDQueryResult extends RestfulTdResult implements ITdQueryResult {
      * @return array 结果集形如：[[FieldValue1, FieldValue2, ..., FieldValueN],[],...,[]]
      */
     public function fetchDataRows(int $fromIndex = 0, int $count = 0) : array {
+        if ($fromIndex < 0 || $fromIndex >= $this->lastRows) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::RESULT_ROW_INDEX_OUT_OF_RANGE_ER_MESSAGE, $fromIndex, 0, $this->lastRows),
+                ErrorCode::RESULT_ROW_INDEX_OUT_OF_RANGE_ERR
+            );
+        }
+
+        if ($fromIndex + $count >= $this->lastRows) {
+            $count = $this->lastRows - $fromIndex;
+        }
+
         return array_slice($this->allData, $fromIndex, $count, false);
     }
 
@@ -137,6 +148,13 @@ class RestfulTDQueryResult extends RestfulTdResult implements ITdQueryResult {
      * @return array 结果形如： [FieldName1 => FieldValue1, FieldName2 => FieldValue2, ...]
      */
     public function fetchDataRow(int $rowIndex) : array {
+        if ($rowIndex < 0 || $rowIndex >= $this->lastRows) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::RESULT_ROW_INDEX_OUT_OF_RANGE_ER_MESSAGE, $rowIndex, 0, $this->lastRows),
+                ErrorCode::RESULT_ROW_INDEX_OUT_OF_RANGE_ERR
+            );
+        }
+
         $dataRow = array_slice($this->allData, $rowIndex, 1);
 
         $result = [];

@@ -17,4 +17,6 @@ class ErrorCode {
 
     const TD_TAOS_SQL_RESULT_NULL_ERR = -404;
 
+    const RESULT_ROW_INDEX_OUT_OF_RANGE_ERR = -501;
+
 }
