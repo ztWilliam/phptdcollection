@@ -11,7 +11,7 @@ namespace WztzTech\Iot\PhpTd\Collection;
  */
 interface ICollectionPoint {
 
-    public static function registerPoint(ICollectionStore $store, ICollector $bindCollector, array $tags) : ICollectionPoint ;
+    public static function registerPoint(ICollectionStore $store, ICollector $bindCollector, array $tags, String $desc = '') : ICollectionPoint ;
 
     public static function createByKey(String $key) : ICollectionPoint;
 
@@ -19,7 +19,9 @@ interface ICollectionPoint {
 
     public function withData(array $values) : ICollectionPoint;
 
-    public function withSecurityInfo(array $securities) : ICollectionPoint;
+    public function withPrivateOptions(array $options) : ICollectionPoint;
+
+    public function gather();
 
     public function save();
 
