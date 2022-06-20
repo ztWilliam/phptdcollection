@@ -1,6 +1,7 @@
 <?php
 namespace WztzTech\Iot\PhpTd\Collection;
 
+use PhpParser\Node\Expr\Cast\String_;
 use WztzTech\Iot\PhpTd\Enum\TdUpdateMode;
 
 /**
@@ -39,6 +40,10 @@ interface ICollectionStore {
     public static function newInstance(String $name = '') : ICollectionStore;
 
     // public function alterDb($options = []);
+
+    public function getName() : String;
+
+    public function getDesc() : String;
 
     /**
      * 向数据库中添加采集点

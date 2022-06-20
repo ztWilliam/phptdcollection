@@ -4,10 +4,12 @@ namespace WztzTech\Iot\PhpTd\Collection;
 use WztzTech\Iot\PhpTd\Enum\TdUpdateMode;
 
 class BaseCollectionStore implements ICollectionStore {
-    public String $name;
+    private String $name;
+    private String $desc;
 
     protected function __construct(String $name, int $keepDays, int $updateMode, array $options, String $desc = '') {
         $this->name = $name . static::class;
+        $this->desc = $desc;
     }
 
     /**
@@ -45,6 +47,16 @@ class BaseCollectionStore implements ICollectionStore {
         return new static($name, 0, 0, [], '');
     }
 
+    // public function alterDb($options = []);
+
+    public function getName() : String {
+        return $this->name;
+    }
+
+    public function getDesc() : String {
+        return $this->desc;
+    }
+
     /**
      * 向数据库中添加采集点
      * 按照所给 points 的定义，创建对应的数据表
@@ -57,5 +69,6 @@ class BaseCollectionStore implements ICollectionStore {
     public function addPoints(array $points, ICollector $collector = null) : void {
 
     }
+
 
 }

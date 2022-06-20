@@ -14,8 +14,8 @@ class BaseCollectionStoreTest extends TestCase {
 
         $demoStore = StoreDemo::register('demo', 720, TdUpdateMode::DISABLE, [], 'Demo for test');
 
-        $this->assertEquals('baseWztzTech\Iot\PhpTd\Collection\BaseCollectionStore', $baseStore->name);
-        $this->assertEquals('demoWztzTech\Iot\PhpTd\Collection\Demo\CollectionStoreDemo', $demoStore->name);
+        $this->assertEquals('baseWztzTech\Iot\PhpTd\Collection\BaseCollectionStore', $baseStore->getName());
+        $this->assertEquals('demoWztzTech\Iot\PhpTd\Collection\Demo\StoreDemo', $demoStore->getName());
 
     }
 
