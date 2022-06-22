@@ -22,12 +22,12 @@ interface ICollectionStore {
      * 
      * @return ICollectionStore 在数据库创建完毕后，返回相应的实例。
      */
-    public static function register(
+    public static function createStore(
         String $name = '', 
+        String $desc = '', 
         int $keepDays = 1095, 
         int $updateMode = TdUpdateMode::UPDATE_PART, 
-        array $options = [], 
-        String $desc = '') : ICollectionStore ;
+        array $options = []) : ICollectionStore ;
 
     /**
      * 根据数据库的名字，创建合适类型（与register时的类型相同）的 ICollectionStore 实例。
@@ -40,6 +40,14 @@ interface ICollectionStore {
     public static function newInstance(String $name = '') : ICollectionStore;
 
     // public function alterDb($options = []);
+
+    /**
+     * 初始化自身所对应的DB
+     * 
+     * @param bool $reset 是否需要重置，默认为 false，若为 true，则即使DB已经存在，也会重置为空DB状态，会丢掉所有数据，请谨慎使用。
+     * 
+     */
+    public function initDB(bool $reset = false) : void;
 
     public function getName() : String;
 

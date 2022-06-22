@@ -1,9 +1,13 @@
 <?php
 namespace WztzTech\Iot\PhpTd\Collection\Meta;
 
-use WztzTech\Iot\PhpTd\Connector\{TdConnectionManager};
+use WztzTech\Iot\PhpTd\Connector\{TdConnectionManager, ITdQueryResult, ITdResult};
 use WztzTech\Iot\PhpTd\Collection\{ICollectionPoint, ICollectionStore, ICollector};
 use WztzTech\Iot\PhpTd\Enum\TdUpdateMode;
+use WztzTech\Iot\PhpTd\Exception\ErrorCode;
+use WztzTech\Iot\PhpTd\Exception\ErrorMessage;
+use WztzTech\Iot\PhpTd\Exception\PhpTdException;
+use WztzTech\Iot\PhpTd\Exception\TdException;
 use WztzTech\Iot\PhpTd\Util\HttpClient;
 
 /**
@@ -55,21 +59,11 @@ class CollectionMeta {
      * 检查有没有 sys_meta 库，若没有，则执行建库及建表语句，
      * 创建初始的元数据库。
      * 
-     * sys_store 用于存放所有 store 信息的超级表，每个 store 对应一个子表
-     * tags: class_type  desc 
-     * dataFields: counting_time   point_count  collector_count  data_count   data_size
+     * @param bool $reset 是否重置成初始状态
      * 
-     * sys_collector 用于存放所有 采集器 信息的超级表， 每个 collector 对应一个子表
-     * tags: class_type  desc
-     * dataFields: counting_time   store_count   point_count  running_count   recently_running_time    
-     * 
-     * sys_points_in_store 用于存放所有 采集点 信息的超级表， 每个 采集点 对应一个子表
-     * tags: store    collector    desc    class_type   point_key
-     * dataFields: counting_time   data_count   data_size   recently_data_time
-     * 
-     * 
+     * @return int 0:正常初始化成功；1:Meta数据库已存在（无需重置）；-1:初始化Meta数据库失败；-2:初始化系统表失败。
      */
-    public function init(bool $reset = false) {
+    public function init(bool $reset = false) : int {
         //检查是否存在 sys_meta 库
         // 用 use sys_meta 判断是否存在该库，有 error 说明该库不存在
         if ($this->exists()) {
@@ -98,11 +92,54 @@ class CollectionMeta {
     /**
      * 用 sys_store 超级表创建 具体 store 实例对应的表。
      * 表名即为 store 的名称
-     * 
-     * 
      */
-    public function registerStore( ICollectionStore $store ) {
+    public function registerStore( ICollectionStore $store ) : int {
+        //利用 $store 的 名字 作为表名、classtype、desc 作为tags，创建 sys_store 的子表：
+        $tableName = $store->getName();
+        $classType = get_class($store);
+        $desc = $store->getDesc();
 
+        if (empty($tableName)) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::PARAM_OR_FIELD_EMPTY_ERR_MESSAGE, 'Store Name'),
+                ErrorCode::PARAM_OR_FIELD_EMPTY_ERR
+            );
+        }
+
+        //检查名字是否用过：
+        if ($this->tableExists($tableName)) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::NAME_EXISTS_ERR_MESSAGE, $tableName),
+                ErrorCode::NAME_EXISTS_ERR
+            );
+        }
+
+        //创建新 store 表：
+        try {
+            $this->createStoreTable($tableName, $classType, $desc);
+
+        } catch (\Throwable $ex) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::META_REGISTER_FAILED_ERR_MESSAGE, 'Store', $ex->getMessage()),
+                ErrorCode::META_REGISTER_FAILED_ERR
+            );
+        }
+
+        // 创建新采集库对应的 db
+        try {
+            //调用传入的store自己的初始化方法，创建其对应的DB
+            $store->initDB();
+        } catch (\Throwable $ex) {
+            //因为创建 db 失败，所以要把此前创建成功的注册表也删除：
+            $this->deleteTable($tableName);
+
+            throw new PhpTdException(
+                sprintf(ErrorMessage::META_REGISTER_FAILED_ERR_MESSAGE, 'Store', $ex->getMessage()),
+                ErrorCode::META_REGISTER_FAILED_ERR
+            );
+        }
+
+        return 0;
     }
 
     public function registerCollector( ICollector $collector ) {
@@ -193,13 +230,9 @@ class CollectionMeta {
     {
         // 创建表的语句：
 
-
-        $tdSql1 = sprintf("CREATE STABLE %s (`counting_time` TIMESTAMP, `point_count` INT, `collector_count` INT, `data_count` BIGINT, `data_size` BIGINT) TAGS (`class_type` BINARY(200), `desc` NCHAR(200) );", self::META_SYS_STORE_TABLE_NAME);
-        $tdSql2 = sprintf("CREATE STABLE %s (counting_time TIMESTAMP, store_count INT, point_count INT, running_count BIGINT, recently_running_time TIMESTAMP) TAGS (`class_type` BINARY(200), `desc` NCHAR(200) );" , self::META_SYS_COLLECTOR_TABLE_NAME);
-        $tdSql3 = sprintf("CREATE STABLE %s (counting_time TIMESTAMP, data_count BIGINT, data_size BIGINT, recently_data_time TIMESTAMP) TAGS (`store` BINARY(128), `collector` BINARY(128), `point_key` BINARY(128), `class_type` BINARY(200), `desc` NCHAR(200) );", self::META_SYS_POINTS_TABLE_NAME);
-
         $conn = $this->tdManager->getConnection([], $this->_client);
 
+        $tdSql1 = sprintf("CREATE STABLE %s (`counting_time` TIMESTAMP, `point_count` INT, `collector_count` INT, `data_count` BIGINT, `data_size` BIGINT) TAGS (`class_type` BINARY(200), `desc` NCHAR(200) );", self::META_SYS_STORE_TABLE_NAME);
         $result = $conn->withDefaultDb(self::META_DB_NAME)
                         ->exec($tdSql1);
 
@@ -208,6 +241,7 @@ class CollectionMeta {
             return false;
         }
 
+        $tdSql2 = sprintf("CREATE STABLE %s (counting_time TIMESTAMP, store_count INT, point_count INT, running_count BIGINT, recently_running_time TIMESTAMP) TAGS (`class_type` BINARY(200), `desc` NCHAR(200) );" , self::META_SYS_COLLECTOR_TABLE_NAME);
         $result = $conn->exec($tdSql2);
 
         if ($result->hasError()) {
@@ -215,6 +249,7 @@ class CollectionMeta {
             return false;
         }
 
+        $tdSql3 = sprintf("CREATE STABLE %s (counting_time TIMESTAMP, data_count BIGINT, data_size BIGINT, recently_data_time TIMESTAMP) TAGS (`store` BINARY(128), `collector` BINARY(128), `point_key` BINARY(128), `class_type` BINARY(200), `desc` NCHAR(200) );", self::META_SYS_POINTS_TABLE_NAME);
         $result = $conn->exec($tdSql3);
 
         if ($result->hasError()) {
@@ -225,4 +260,62 @@ class CollectionMeta {
         return true;
                 
     }
+
+    /**
+     * 
+     */
+    private function tableExists($tableName) : bool {
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        $tdSql = sprintf(" SHOW TABLES LIKE '%s'; ", $tableName);
+        $result = $conn->withDefaultDb(self::META_DB_NAME)
+                        ->query($tdSql);
+
+        if ($result->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $result->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+        if ($result->rowsAffected() == 0) {
+            return false;
+        } else {
+            return true;
+        }
+
+    }
+
+    private function createStoreTable(String $tableName, String $classType, String $desc) {
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        $tdSql = sprintf(" CREATE TABLE `%s` USING `%s` (`class_type`, `desc`) TAGS ('%s', '%s'); ", 
+            $tableName, self::META_SYS_STORE_TABLE_NAME, $classType, $desc);
+        $result = $conn->withDefaultDb(self::META_DB_NAME)
+                        ->exec($tdSql);
+
+        if ($result->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $result->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+    }
+
+    private function deleteTable(String $tableName) {
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        $tdSql = sprintf(" DROP TABLE IF EXISTS `%s`; ", $tableName );
+        $result = $conn->withDefaultDb(self::META_DB_NAME)
+                        ->exec($tdSql);
+
+        if ($result->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $result->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+    }
+
 }

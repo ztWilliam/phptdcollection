@@ -16,5 +16,15 @@ class ErrorMessage {
 
     const TD_TAOS_SQL_RESULT_NULL_ERR_MESSAGE = "taos sql 结果为空。必须是有效的json字符串";
 
-    const RESULT_ROW_INDEX_OUT_OF_RANGE_ER_MESSAGE = "数据行号 %s 超出范围：[%s, %s]";
+    const TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE = "taos sql 执行失败，错误信息：%s";
+
+    const RESULT_ROW_INDEX_OUT_OF_RANGE_ERR_MESSAGE = "数据行号 %s 超出范围：[%s, %s]";
+
+    const NAME_EXISTS_ERR_MESSAGE = "已存在名为【%s】的记录";
+
+    const META_REGISTER_FAILED_ERR_MESSAGE = "%s 注册失败，详情：%s";
+
+    const PARAM_OR_FIELD_EMPTY_ERR_MESSAGE = "【%s】不能为空";
+
+
 }

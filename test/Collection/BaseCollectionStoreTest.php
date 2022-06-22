@@ -10,12 +10,12 @@ use WztzTech\Iot\PhpTd\Enum\TdUpdateMode;
 class BaseCollectionStoreTest extends TestCase {
 
     public function testRegister() {
-        $baseStore = BaseCollectionStore::register('base', 360, TdUpdateMode::UPDATE_PART, [], 'Base for test');
+        $baseStore = BaseCollectionStore::createStore('base', 'Base for test', 360, TdUpdateMode::UPDATE_PART, []);
 
-        $demoStore = StoreDemo::register('demo', 720, TdUpdateMode::DISABLE, [], 'Demo for test');
+        $demoStore = StoreDemo::createStore('demo', 'Demo for test', 720, TdUpdateMode::DISABLE, []);
 
-        $this->assertEquals('baseWztzTech\Iot\PhpTd\Collection\BaseCollectionStore', $baseStore->getName());
-        $this->assertEquals('demoWztzTech\Iot\PhpTd\Collection\Demo\StoreDemo', $demoStore->getName());
+        $this->assertEquals('base', $baseStore->getName());
+        $this->assertEquals('demo', $demoStore->getName());
 
     }
 

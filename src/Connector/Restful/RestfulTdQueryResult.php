@@ -127,7 +127,7 @@ class RestfulTDQueryResult extends RestfulTdResult implements ITdQueryResult {
     public function fetchDataRows(int $fromIndex = 0, int $count = 0) : array {
         if ($fromIndex < 0 || $fromIndex >= $this->lastRows) {
             throw new PhpTdException(
-                sprintf(ErrorMessage::RESULT_ROW_INDEX_OUT_OF_RANGE_ER_MESSAGE, $fromIndex, 0, $this->lastRows),
+                sprintf(ErrorMessage::RESULT_ROW_INDEX_OUT_OF_RANGE_ERR_MESSAGE, $fromIndex, 0, $this->lastRows),
                 ErrorCode::RESULT_ROW_INDEX_OUT_OF_RANGE_ERR
             );
         }
@@ -150,7 +150,7 @@ class RestfulTDQueryResult extends RestfulTdResult implements ITdQueryResult {
     public function fetchDataRow(int $rowIndex) : array {
         if ($rowIndex < 0 || $rowIndex >= $this->lastRows) {
             throw new PhpTdException(
-                sprintf(ErrorMessage::RESULT_ROW_INDEX_OUT_OF_RANGE_ER_MESSAGE, $rowIndex, 0, $this->lastRows),
+                sprintf(ErrorMessage::RESULT_ROW_INDEX_OUT_OF_RANGE_ERR_MESSAGE, $rowIndex, 0, $this->lastRows),
                 ErrorCode::RESULT_ROW_INDEX_OUT_OF_RANGE_ERR
             );
         }

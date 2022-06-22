@@ -2,6 +2,7 @@
 namespace WztzTech\Iot\PhpTd\Test\Collection\Meta;
 
 use PHPUnit\Framework\TestCase;
+use WztzTech\Iot\PhpTd\Collection\BaseCollectionStore;
 use WztzTech\Iot\PhpTd\Collection\Meta\CollectionMeta;
 use WztzTech\Iot\PhpTd\Util\HttpClient;
 
@@ -21,11 +22,24 @@ class CollectionMetaTest extends TestCase {
         $this->assertEquals(0, $initResult);
     }
 
+    public function testRegisterStore_Without_Mock() {
+        $this->markTestSkipped();
+
+        $meta = CollectionMeta::getMetaAgent();
+
+        $store = BaseCollectionStore::createStore('BaseStore_1', '用于测试看看的 store。' );
+
+        $registerResult = $meta->registerStore($store);
+
+        $this->assertEquals(0, $registerResult);
+
+    }
+
     public function testInit_Exist_Without_Reset() {
         $client = $this->createMock(HttpClient::class);
 
-        $client->expects( exactly(2) )
-            ->method('send') 
+        $client->expects(exactly(2))
+            ->method('send')
             ->willReturnOnConsecutiveCalls(
                 //连接登录
                 json_decode('{"status":"succ","code":0,"desc":"/KfeAzX/f9na8qdtNZmtONryp201ma04bEl8LcvLUd7a8qdtNZmtONryp201ma04"}', false),
@@ -36,6 +50,6 @@ class CollectionMetaTest extends TestCase {
         $meta = CollectionMeta::getMetaAgent($client);
 
         $meta->init();
-
     }
+
 }
