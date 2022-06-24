@@ -1,9 +1,12 @@
 <?php
 namespace WztzTech\Iot\PhpTd\Test\Collection\Meta;
 
+use PhpParser\ErrorHandler\Collecting;
 use PHPUnit\Framework\TestCase;
 use WztzTech\Iot\PhpTd\Collection\BaseCollectionStore;
 use WztzTech\Iot\PhpTd\Collection\Meta\CollectionMeta;
+use WztzTech\Iot\PhpTd\Exception\PhpTdException;
+use WztzTech\Iot\PhpTd\Exception\TdException;
 use WztzTech\Iot\PhpTd\Util\HttpClient;
 
 use function PHPUnit\Framework\exactly;
@@ -23,7 +26,7 @@ class CollectionMetaTest extends TestCase {
     }
 
     public function testRegisterStore_Without_Mock() {
-        $this->markTestSkipped();
+        // $this->markTestSkipped();
 
         $meta = CollectionMeta::getMetaAgent();
 
@@ -50,6 +53,23 @@ class CollectionMetaTest extends TestCase {
         $meta = CollectionMeta::getMetaAgent($client);
 
         $meta->init();
+    }
+
+    public function testRegisterStore_initDB_Failed() {
+        
+        $store = $this->createMock(BaseCollectionStore::class);
+
+        $store->expects(exactly(1))->method('getName')->willReturn('BaseTestStore_2');
+        $store->expects(exactly(1))->method('getDesc')->willReturn('测试init出错用的store');
+
+        $store->expects(exactly(1))->method('initDB')->willThrowException(new TdException());
+
+        $meta = CollectionMeta::getMetaAgent();
+
+        $this->expectException(PhpTdException::class);
+        $meta->registerStore($store);
+
+
     }
 
 }
