@@ -8,7 +8,7 @@ use WztzTech\Iot\PhpTd\Exception\ErrorCode;
 use WztzTech\Iot\PhpTd\Exception\ErrorMessage;
 use WztzTech\Iot\PhpTd\Exception\PhpTdException;
 use WztzTech\Iot\PhpTd\Exception\TdException;
-use WztzTech\Iot\PhpTd\Util\HttpClient;
+use WztzTech\Iot\PhpTd\Util\{HttpClient, TimeUtil};
 
 /**
  * 所有Store、Collector、Points的信息，注册后的元数据均由 CollectionMeta 负责管理
@@ -34,6 +34,14 @@ class CollectionMeta {
     const META_DB_KEEP = 7200;
     
     const META_DB_DAYS = 30;
+
+    const PREFIX_STORE_TABLE = "store_";
+    const PREFIX_COLLECTOR_TABLE = "collector_";
+    const PREFIX_POINT_TABLE = "point_";
+
+    const CLASS_TYPE_SEPARATOR = "\\";
+
+    const CLASS_TYPE_SEPARATOR_REPLACE = "||";
 
     private HttpClient $_client;
 
@@ -95,8 +103,8 @@ class CollectionMeta {
      */
     public function registerStore( ICollectionStore $store ) : int {
         //利用 $store 的 名字 作为表名、classtype、desc 作为tags，创建 sys_store 的子表：
-        $tableName = $store->getName();
-        $classType = get_class($store);
+        $tableName = self::PREFIX_STORE_TABLE . $store->getName();
+        $classType = str_replace(self::CLASS_TYPE_SEPARATOR, self::CLASS_TYPE_SEPARATOR_REPLACE, get_class($store));
         $desc = $store->getDesc();
 
         if (empty($tableName)) {
@@ -214,15 +222,15 @@ class CollectionMeta {
 
     /**
      * sys_store 用于存放所有 store 信息的超级表，每个 store 对应一个子表
-     * tags: class_type  desc 
+     * tags: store_name class_type  desc 
      * dataFields: counting_time   point_count  collector_count  data_count   data_size
      * 
      * sys_collector 用于存放所有 采集器 信息的超级表， 每个 collector 对应一个子表
-     * tags: class_type  desc
+     * tags: collector_name  class_type  desc
      * dataFields: counting_time   store_count   point_count  running_count   recently_running_time    
      * 
      * sys_points_in_store 用于存放所有 采集点 信息的超级表， 每个 采集点 对应一个子表
-     * tags: store    collector    desc    class_type   point_key
+     * tags: point_name  store  collector  desc    class_type   point_key
      * dataFields: counting_time   data_count   data_size   recently_data_time
      * 
      */
@@ -232,7 +240,7 @@ class CollectionMeta {
 
         $conn = $this->tdManager->getConnection([], $this->_client);
 
-        $tdSql1 = sprintf("CREATE STABLE %s (`counting_time` TIMESTAMP, `point_count` INT, `collector_count` INT, `data_count` BIGINT, `data_size` BIGINT) TAGS (`class_type` BINARY(200), `desc` NCHAR(200) );", self::META_SYS_STORE_TABLE_NAME);
+        $tdSql1 = sprintf("CREATE STABLE %s (`counting_time` TIMESTAMP, `point_count` INT, `collector_count` INT, `data_count` BIGINT, `data_size` BIGINT) TAGS (`store_name` BINARY(128), `class_type` BINARY(200), `desc` NCHAR(200) );", self::META_SYS_STORE_TABLE_NAME);
         $result = $conn->withDefaultDb(self::META_DB_NAME)
                         ->exec($tdSql1);
 
@@ -241,7 +249,7 @@ class CollectionMeta {
             return false;
         }
 
-        $tdSql2 = sprintf("CREATE STABLE %s (counting_time TIMESTAMP, store_count INT, point_count INT, running_count BIGINT, recently_running_time TIMESTAMP) TAGS (`class_type` BINARY(200), `desc` NCHAR(200) );" , self::META_SYS_COLLECTOR_TABLE_NAME);
+        $tdSql2 = sprintf("CREATE STABLE %s (counting_time TIMESTAMP, store_count INT, point_count INT, running_count BIGINT, recently_running_time TIMESTAMP) TAGS (`collector_name` BINARY(128),  `class_type` BINARY(200), `desc` NCHAR(200) );" , self::META_SYS_COLLECTOR_TABLE_NAME);
         $result = $conn->exec($tdSql2);
 
         if ($result->hasError()) {
@@ -249,7 +257,7 @@ class CollectionMeta {
             return false;
         }
 
-        $tdSql3 = sprintf("CREATE STABLE %s (counting_time TIMESTAMP, data_count BIGINT, data_size BIGINT, recently_data_time TIMESTAMP) TAGS (`store` BINARY(128), `collector` BINARY(128), `point_key` BINARY(128), `class_type` BINARY(200), `desc` NCHAR(200) );", self::META_SYS_POINTS_TABLE_NAME);
+        $tdSql3 = sprintf("CREATE STABLE %s (counting_time TIMESTAMP, data_count BIGINT, data_size BIGINT, recently_data_time TIMESTAMP) TAGS (`point_name` BINARY(128), `store` BINARY(128), `collector` BINARY(128), `point_key` BINARY(128), `class_type` BINARY(200), `desc` NCHAR(200) );", self::META_SYS_POINTS_TABLE_NAME);
         $result = $conn->exec($tdSql3);
 
         if ($result->hasError()) {
@@ -258,7 +266,6 @@ class CollectionMeta {
         }
         
         return true;
-                
     }
 
     /**
@@ -286,11 +293,24 @@ class CollectionMeta {
 
     }
 
+    /**
+     * sys_store 用于存放所有 store 信息的超级表，每个 store 对应一个子表
+     * tags: store_name class_type  desc 
+     * dataFields: counting_time   point_count  collector_count  data_count   data_size
+     * 
+     */
     private function createStoreTable(String $tableName, String $classType, String $desc) {
         $conn = $this->tdManager->getConnection([], $this->_client);
 
-        $tdSql = sprintf(" CREATE TABLE `%s` USING `%s` (`class_type`, `desc`) TAGS ('%s', '%s'); ", 
-            $tableName, self::META_SYS_STORE_TABLE_NAME, $classType, $desc);
+        $tdSql = sprintf(
+            "INSERT INTO `%s` USING `%s` (`store_name`, `class_type`, `desc`) TAGS ('%s', '%s', '%s') (counting_time, point_count, collector_count, data_count) VALUES (%s, %d, %d, %d)", 
+            $tableName,
+            self::META_SYS_STORE_TABLE_NAME,
+            $tableName, $classType, $desc,
+            TimeUtil::getMiliSeconds(),
+            0, 0, 0
+        );
+
         $result = $conn->withDefaultDb(self::META_DB_NAME)
                         ->exec($tdSql);
 
@@ -300,6 +320,7 @@ class CollectionMeta {
                 ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
             );
         }
+
     }
 
     private function deleteTable(String $tableName) {

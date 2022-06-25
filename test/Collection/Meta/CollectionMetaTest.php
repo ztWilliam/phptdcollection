@@ -15,7 +15,7 @@ class CollectionMetaTest extends TestCase {
 
     public function testInit_reset_Without_Mock() {
         //本测试代码会真正执行init并reset数据，默认为跳过，请务必慎重执行！！
-        $this->markTestSkipped();
+        // $this->markTestSkipped();
 
         $meta = CollectionMeta::getMetaAgent();
 
