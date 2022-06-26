@@ -4,6 +4,7 @@ namespace WztzTech\Iot\PhpTd\Test\Collection\Meta;
 use PhpParser\ErrorHandler\Collecting;
 use PHPUnit\Framework\TestCase;
 use WztzTech\Iot\PhpTd\Collection\BaseCollectionStore;
+use WztzTech\Iot\PhpTd\Collection\Demo\StoreDemo;
 use WztzTech\Iot\PhpTd\Collection\Meta\CollectionMeta;
 use WztzTech\Iot\PhpTd\Exception\PhpTdException;
 use WztzTech\Iot\PhpTd\Exception\TdException;
@@ -33,6 +34,10 @@ class CollectionMetaTest extends TestCase {
         $store = BaseCollectionStore::createStore('BaseStore_1', '用于测试看看的 store。' );
 
         $registerResult = $meta->registerStore($store);
+        $this->assertEquals(0, $registerResult);
+
+        $demoStore = StoreDemo::createStore('DemoStore_1', '测试继承自 BaseCollectionStore 的类型');
+        $registerResult = $meta->registerStore($demoStore);
 
         $this->assertEquals(0, $registerResult);
 
