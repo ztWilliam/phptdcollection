@@ -150,6 +150,9 @@ class CollectionMeta {
         return 0;
     }
 
+    /**
+     * 
+     */
     public function registerCollector( ICollector $collector ) {
 
     }
@@ -303,7 +306,9 @@ class CollectionMeta {
         $conn = $this->tdManager->getConnection([], $this->_client);
 
         $tdSql = sprintf(
-            "INSERT INTO `%s` USING `%s` (`store_name`, `class_type`, `desc`) TAGS ('%s', '%s', '%s') (counting_time, point_count, collector_count, data_count) VALUES (%s, %d, %d, %d)", 
+            "INSERT INTO `%s` USING `%s` 
+            (`store_name`, `class_type`, `desc`) TAGS ('%s', '%s', '%s') 
+            (counting_time, point_count, collector_count, data_count) VALUES (%s, %d, %d, %d)", 
             $tableName,
             self::META_SYS_STORE_TABLE_NAME,
             $tableName, $classType, $desc,
