@@ -3,12 +3,15 @@ namespace WztzTech\Iot\PhpTd\Collection\Meta;
 
 use WztzTech\Iot\PhpTd\Connector\{TdConnectionManager, ITdQueryResult, ITdResult};
 use WztzTech\Iot\PhpTd\Collection\{ICollectionPoint, ICollectionStore, ICollector};
+
 use WztzTech\Iot\PhpTd\Enum\TdUpdateMode;
 use WztzTech\Iot\PhpTd\Exception\ErrorCode;
 use WztzTech\Iot\PhpTd\Exception\ErrorMessage;
 use WztzTech\Iot\PhpTd\Exception\PhpTdException;
 use WztzTech\Iot\PhpTd\Exception\TdException;
 use WztzTech\Iot\PhpTd\Util\{HttpClient, TimeUtil};
+
+use WztzTech\Iot\PhpTd\Collection\Meta\Parser\{ParserConstant, StoreParser};
 
 /**
  * 所有Store、Collector、Points的信息，注册后的元数据均由 CollectionMeta 负责管理
@@ -35,13 +38,6 @@ class CollectionMeta {
     
     const META_DB_DAYS = 30;
 
-    const PREFIX_STORE_TABLE = "store_";
-    const PREFIX_COLLECTOR_TABLE = "collector_";
-    const PREFIX_POINT_TABLE = "point_";
-
-    const CLASS_TYPE_SEPARATOR = "\\";
-
-    const CLASS_TYPE_SEPARATOR_REPLACE = "||";
 
     private HttpClient $_client;
 
@@ -103,8 +99,8 @@ class CollectionMeta {
      */
     public function registerStore( ICollectionStore $store ) : int {
         //利用 $store 的 名字 作为表名、classtype、desc 作为tags，创建 sys_store 的子表：
-        $tableName = self::PREFIX_STORE_TABLE . $store->getName();
-        $classType = str_replace(self::CLASS_TYPE_SEPARATOR, self::CLASS_TYPE_SEPARATOR_REPLACE, get_class($store));
+        $tableName = ParserConstant::PREFIX_STORE_TABLE . $store->getName();
+        $classType = str_replace(ParserConstant::CLASS_TYPE_SEPARATOR, ParserConstant::CLASS_TYPE_SEPARATOR_REPLACE, get_class($store));
         $desc = $store->getDesc();
 
         if (empty($tableName)) {
@@ -161,8 +157,58 @@ class CollectionMeta {
 
     }
 
-    public function allStores() {
+    /**
+     * 给出当前所有已注册的 store，并按各自的 class_type 初始化成相应类型的对象。
+     * 
+     * @return array 共有两个元素：
+     * 第 0 个是以 storeName 为 key， 以 store 对象为 value 的数组，
+     * 第 1 个是以 storeName 为 key ，store 的最新统计信息为 value 的数组
+     */
+    public function allStores() : array {
 
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        //先查询所有 store 的基本信息（Tag字段）
+        $baseSql = sprintf("SELECT `store_name`, `class_type`, `desc` FROM `%s`", self::META_SYS_STORE_TABLE_NAME);
+
+        $baseResult = $conn->withDefaultDb(self::META_DB_NAME)
+                        ->query($baseSql);
+
+        if ($baseResult->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $baseResult->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+                
+        //再查询所有 store 的最新统计信息 （data 字段）
+        $dataSql = sprintf(
+            "SELECT `store_name`, last(*) FROM `%s` GROUP BY store_name ORDER BY store_name ASC", 
+            self::META_SYS_STORE_TABLE_NAME
+        );
+
+        $dataResult = $conn->query($dataSql);
+
+        if ($dataResult->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $dataResult->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+        try {
+            //将查询结果交给 parser，获得结果数组
+            $stores = StoreParser::parseStore($baseResult);
+
+            $storeInfos = StoreParser::parseStoreInfo($dataResult);
+
+            return [$stores, $storeInfos];
+
+        } catch (\Throwable $ex) {
+            throw new PhpTdException(
+                $ex->getMessage()
+            );
+        }
     }
 
     public function collectorInfo(String $collectorName) {
@@ -308,12 +354,12 @@ class CollectionMeta {
         $tdSql = sprintf(
             "INSERT INTO `%s` USING `%s` 
             (`store_name`, `class_type`, `desc`) TAGS ('%s', '%s', '%s') 
-            (counting_time, point_count, collector_count, data_count) VALUES (%s, %d, %d, %d)", 
+            (counting_time, point_count, collector_count, data_count, data_size) VALUES (%s, %d, %d, %d)", 
             $tableName,
             self::META_SYS_STORE_TABLE_NAME,
             $tableName, $classType, $desc,
             TimeUtil::getMiliSeconds(),
-            0, 0, 0
+            0, 0, 0, 0
         );
 
         $result = $conn->withDefaultDb(self::META_DB_NAME)
