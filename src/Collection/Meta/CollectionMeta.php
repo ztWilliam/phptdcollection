@@ -354,7 +354,7 @@ class CollectionMeta {
         $tdSql = sprintf(
             "INSERT INTO `%s` USING `%s` 
             (`store_name`, `class_type`, `desc`) TAGS ('%s', '%s', '%s') 
-            (counting_time, point_count, collector_count, data_count, data_size) VALUES (%s, %d, %d, %d)", 
+            (counting_time, point_count, collector_count, data_count, data_size) VALUES (%d, %d, %d, %d, %d)", 
             $tableName,
             self::META_SYS_STORE_TABLE_NAME,
             $tableName, $classType, $desc,

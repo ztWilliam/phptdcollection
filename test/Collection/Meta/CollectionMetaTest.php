@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use WztzTech\Iot\PhpTd\Collection\BaseCollectionStore;
 use WztzTech\Iot\PhpTd\Collection\Demo\StoreDemo;
 use WztzTech\Iot\PhpTd\Collection\Meta\CollectionMeta;
+use WztzTech\Iot\PhpTd\Connector\TdConnectionManager;
 use WztzTech\Iot\PhpTd\Exception\PhpTdException;
 use WztzTech\Iot\PhpTd\Exception\TdException;
 use WztzTech\Iot\PhpTd\Util\HttpClient;
@@ -41,6 +42,12 @@ class CollectionMetaTest extends TestCase {
 
         $this->assertEquals(0, $registerResult);
 
+        //将因为此测试而新创建的db移除：
+        $connManager = new TdConnectionManager();
+        $conn = $connManager->getConnection();
+        $conn->exec('DROP DATABASE basestore_1');
+        $conn->exec('DROP DATABASE demostore_1');
+
     }
 
     public function testInit_Exist_Without_Reset() {
@@ -74,6 +81,37 @@ class CollectionMetaTest extends TestCase {
         $this->expectException(PhpTdException::class);
         $meta->registerStore($store);
 
+
+    }
+
+    public function testAllStores_WithMock() {
+        $client = $this->createMock(HttpClient::class);
+
+        $client->expects(exactly(3))
+            ->method('send')
+            ->willReturnOnConsecutiveCalls(
+                //连接登录
+                json_decode('{"status":"succ","code":0,"desc":"/KfeAzX/f9na8qdtNZmtONryp201ma04bEl8LcvLUd7a8qdtNZmtONryp201ma04"}', false),
+                //查询基本信息的结果
+                json_decode('{"status":"succ","head":["store_name","class_type","desc"],"column_meta":[["store_name",8,128],["class_type",8,200],["desc",10,200]],"data":[["store_BaseStore_1","WztzTech||Iot||PhpTd||Collection||BaseCollectionStore","用于测试看看的 store。"],["store_DemoStore_1","WztzTech||Iot||PhpTd||Collection||Demo||StoreDemo","测试继承自 BaseCollectionStore 的类型"]],"rows":2}', false),
+                //查询数据统计信息的结果
+                json_decode('{"status":"succ","head":["store_name","counting_time","point_count","collector_count","data_count","data_size","store_name"],"column_meta":[["store_name",8,128],["counting_time",9,8],["point_count",4,4],["collector_count",4,4],["data_count",5,8],["data_size",5,8],["store_name",8,128]],"data":[["store_BaseStore_1",1656258396330,0,0,0,null,"store_BaseStore_1"],["store_DemoStore_1",1656258396357,0,0,0,null,"store_DemoStore_1"]],"rows":2}' , false)
+            );
+
+        $meta = CollectionMeta::getMetaAgent($client);
+
+        $stores = $meta->allStores();
+
+        $this->assertCount(2, $stores);
+
+        $this->assertArrayHasKey('store_BaseStore_1', $stores[0]);
+        $this->assertArrayHasKey('store_DemoStore_1', $stores[0]);
+        $this->assertArrayHasKey('store_BaseStore_1', $stores[1]);
+        $this->assertArrayHasKey('store_DemoStore_1', $stores[1]);
+
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Demo\\StoreDemo", $stores[0]['store_DemoStore_1']);
+
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Meta\\Analyzer\\StoreCounterData", $stores[1]['store_BaseStore_1']);
 
     }
 

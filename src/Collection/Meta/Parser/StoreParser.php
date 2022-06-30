@@ -70,10 +70,10 @@ class StoreParser {
             $storeDataObj = new StoreCounterData(
                 $storeName,
                 $rowData['counting_time'],
-                $rowData['point_count'],
-                $rowData['collector_count'],
-                $rowData['data_count'],
-                $rowData['data_size']
+                is_null($rowData['point_count']) ? 0 : $rowData['point_count'],
+                is_null($rowData['collector_count']) ? 0 : $rowData['collector_count'],
+                is_null($rowData['data_count']) ? 0 : $rowData['data_count'],
+                is_null($rowData['data_size']) ? 0 : $rowData['data_size']
             );
             
             $storeData[$storeName] = $storeDataObj;
