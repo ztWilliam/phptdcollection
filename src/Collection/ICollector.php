@@ -17,13 +17,13 @@ interface ICollector {
      * 其状态为尚未注册的，不能被使用的。
      * 
      * @param String $name 采集器的名称，全系统范围内是不能重名的
+     * @param String $desc 该采集器的描述信息
      * @param array $tags 采集器的 tags 定义。以 tagFieldName 为键，以 ColumnMeta 对象为值。
      * @param array $dataFields 采集器的数据字段定义。 以 dataFieldName 为键， 以 ColumnMeta 对象为值
-     * @param String $desc 该采集器的描述信息
      * 
      * @return ICollector
      */
-    public static function createCollector(String $name, array $tags, array $dataFields, String $desc = '') : ICollector;
+    public static function createCollector(String $name, String $desc = '', array $tags = null, array $dataFields = null) : ICollector;
 
     /**
      * 根据采集器的名称，创建一个 ICollector 实例
@@ -82,5 +82,11 @@ interface ICollector {
      * @return array 以 dataFieldName 为键，以 ColumnMeta 对象为值
      */
     public function allDataFields() : array;
+
+
+    public function getName() : String;
+
+
+    public function getDesc() : String;
 
 }

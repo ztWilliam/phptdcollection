@@ -4,6 +4,7 @@ namespace WztzTech\Iot\PhpTd\Test\Collection\Meta;
 use PhpParser\ErrorHandler\Collecting;
 use PHPUnit\Framework\TestCase;
 use WztzTech\Iot\PhpTd\Collection\BaseCollectionStore;
+use WztzTech\Iot\PhpTd\Collection\BaseCollector;
 use WztzTech\Iot\PhpTd\Collection\Demo\StoreDemo;
 use WztzTech\Iot\PhpTd\Collection\Meta\CollectionMeta;
 use WztzTech\Iot\PhpTd\Connector\TdConnectionManager;
@@ -113,6 +114,33 @@ class CollectionMetaTest extends TestCase {
 
         $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Meta\\Analyzer\\StoreCounterData", $stores[1]['store_BaseStore_1']);
 
+    }
+
+    public function testAllStores_WithoutMock() {
+        $meta = CollectionMeta::getMetaAgent();
+
+        $stores = $meta->allStores();
+
+        $this->assertArrayHasKey('store_BaseStore_1', $stores[0]);
+        $this->assertArrayHasKey('store_DemoStore_1', $stores[0]);
+        $this->assertArrayHasKey('store_BaseStore_1', $stores[1]);
+        $this->assertArrayHasKey('store_DemoStore_1', $stores[1]);
+
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Demo\\StoreDemo", $stores[0]['store_DemoStore_1']);
+
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Meta\\Analyzer\\StoreCounterData", $stores[1]['store_BaseStore_1']);
+
+    }
+
+    public function testRegisterCollector_WithoutMock() {
+        $collector = BaseCollector::createCollector('BaseCollectorTest_1', '测试注册基础Collector');
+
+        $meta = CollectionMeta::getMetaAgent();
+
+        $meta->registerCollector($collector);
+
+        //只要不报错就行：
+        $this->assertEquals(0,0);
     }
 
 }

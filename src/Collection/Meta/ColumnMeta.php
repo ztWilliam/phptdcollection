@@ -39,4 +39,14 @@ class ColumnMeta {
         return false;
     }
 
+    public static function parseFromJson( String $json ) : ColumnMeta {
+
+        return new ColumnMeta('', 0, 0);
+    }
+
+    public function toJson() : String {
+
+        return '';
+    }
+
 }

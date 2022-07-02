@@ -103,7 +103,7 @@ class CollectionMeta {
         $classType = str_replace(ParserConstant::CLASS_TYPE_SEPARATOR, ParserConstant::CLASS_TYPE_SEPARATOR_REPLACE, get_class($store));
         $desc = $store->getDesc();
 
-        if (empty($tableName)) {
+        if (empty($store->getName())) {
             throw new PhpTdException(
                 sprintf(ErrorMessage::PARAM_OR_FIELD_EMPTY_ERR_MESSAGE, 'Store Name'),
                 ErrorCode::PARAM_OR_FIELD_EMPTY_ERR
@@ -147,9 +147,43 @@ class CollectionMeta {
     }
 
     /**
+     * 根据 sys_collector 超级表，创建新的 collector 表，表名来自 $collector 的 getName 方法。
+     * 
+     * @param ICollector $collector  要注册的实现了 ICollector 接口的对象
      * 
      */
     public function registerCollector( ICollector $collector ) {
+        $collectorName = $collector->getName();
+
+        if (empty($collectorName)) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::PARAM_OR_FIELD_EMPTY_ERR_MESSAGE, 'Collector Name'),
+                ErrorCode::PARAM_OR_FIELD_EMPTY_ERR
+            );
+        }
+
+        $desc = $collector->getDesc();
+
+        $classType = str_replace(ParserConstant::CLASS_TYPE_SEPARATOR, ParserConstant::CLASS_TYPE_SEPARATOR_REPLACE, get_class($collector));
+
+        $tableName = ParserConstant::PREFIX_COLLECTOR_TABLE . $collectorName;
+
+        if ($this->tableExists($tableName)) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::NAME_EXISTS_ERR_MESSAGE, $collectorName),
+                ErrorCode::NAME_EXISTS_ERR
+            );
+        }
+
+        try {
+            $this->createCollectorTable($collectorName, $classType, $desc);
+
+        } catch (\Throwable $ex) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::META_REGISTER_FAILED_ERR_MESSAGE, 'Collector', $ex->getMessage()),
+                ErrorCode::META_REGISTER_FAILED_ERR
+            );
+        }
 
     }
 
@@ -162,7 +196,7 @@ class CollectionMeta {
      * 
      * @return array 共有两个元素：
      * 第 0 个是以 storeName 为 key， 以 store 对象为 value 的数组，
-     * 第 1 个是以 storeName 为 key ，store 的最新统计信息为 value 的数组
+     * 第 1 个是以 storeName 为 key ，以 StoreCounterData 对象（ store 的最新统计信息）为 value 的数组
      */
     public function allStores() : array {
 
@@ -209,6 +243,11 @@ class CollectionMeta {
                 $ex->getMessage()
             );
         }
+    }
+
+    public function searchCollector(String $cllectorNameLike, int $page = 0, int $pageSize = 20) : array {
+
+        return [];
     }
 
     public function collectorInfo(String $collectorName) {
@@ -360,6 +399,39 @@ class CollectionMeta {
             $tableName, $classType, $desc,
             TimeUtil::getMiliSeconds(),
             0, 0, 0, 0
+        );
+
+        $result = $conn->withDefaultDb(self::META_DB_NAME)
+                        ->exec($tdSql);
+
+        if ($result->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $result->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+    }
+
+    /**
+     * sys_collector 用于存放所有 采集器 信息的超级表， 每个 collector 对应一个子表
+     * tags: collector_name  class_type  desc
+     * dataFields: counting_time   store_count   point_count  running_count   recently_running_time    
+     */
+    private function createCollectorTable(String $collectorName, String $classType, String $desc) {
+        $tableName = ParserConstant::PREFIX_COLLECTOR_TABLE . $collectorName;
+
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        $tdSql = sprintf(
+            "INSERT INTO `%s` USING `%s` 
+            (`collector_name`, `class_type`, `desc`) TAGS ('%s', '%s', '%s') 
+            (counting_time, store_count, point_count, running_count, recently_running_time) VALUES (%d, %d, %d, %d, %d)", 
+            $tableName,
+            self::META_SYS_COLLECTOR_TABLE_NAME,
+            $collectorName, $classType, $desc,
+            TimeUtil::getMiliSeconds(),
+            0, 0, 0, null
         );
 
         $result = $conn->withDefaultDb(self::META_DB_NAME)
