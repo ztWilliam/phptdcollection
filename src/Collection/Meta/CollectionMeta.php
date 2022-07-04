@@ -11,7 +11,7 @@ use WztzTech\Iot\PhpTd\Exception\PhpTdException;
 use WztzTech\Iot\PhpTd\Exception\TdException;
 use WztzTech\Iot\PhpTd\Util\{HttpClient, TimeUtil};
 
-use WztzTech\Iot\PhpTd\Collection\Meta\Parser\{ParserConstant, StoreParser};
+use WztzTech\Iot\PhpTd\Collection\Meta\Parser\{CollectorParser, ParserConstant, StoreParser};
 
 /**
  * 所有Store、Collector、Points的信息，注册后的元数据均由 CollectionMeta 负责管理
@@ -250,12 +250,76 @@ class CollectionMeta {
         }
     }
 
-    public function searchCollector(String $cllectorNameLike, int $page = 0, int $pageSize = 20) : array {
+    /**
+     * 检索已注册的采集器。
+     * 
+     * @param String $collectorNameLike 采集器的名称，可输入名称的部分字符，进行模糊查询。
+     * @param int $page 分页查询时，欲查询第几页，以 0 为第一页。
+     * @param int $pageSize 分页查询时，每次查询返回的最大结果数量。
+     * 
+     * @return array ICollector 对象数组
+     * 
+     */
+    public function searchCollector(String $collectorNameLike = '', int $page = 0, int $pageSize = 20) : array {
+        $offset = $page * $pageSize;
 
-        return [];
+        $tdSql = sprintf("SELECT DISTINCT `collector_name`, `class_type`, `desc` 
+            FROM `%s` WHERE `collector_name` LIKE '\%%s\%' LIMIT %d OFFSET %d ", 
+            self::META_SYS_COLLECTOR_TABLE_NAME, 
+            $collectorNameLike, $pageSize, $offset
+        );
+
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        $result = $conn->withDefaultDb(self::META_DB_NAME)
+                      ->query($tdSql);
+
+        if ($result->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $result->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+        $collectors = CollectorParser::parseCollectors($result);
+
+        return $collectors;
     }
 
+    /**
+     * 根据采集器的名称（注册时采用的名称），获取该采集器的实例对象。
+     * 
+     * @param String $collectorName 完整的采集器名称
+     * 
+     * @return ICollector|null 如果有匹配的记录，则返回 ICollector 实例对象, 若未找到记录，则返回 null。
+     * 
+     */
     public function collectorInfo(String $collectorName) {
+        $tdSql = sprintf("SELECT DISTINCT `collector_name`, `class_type`, `desc` 
+            FROM `%s` WHERE `collector_name` = '%s' ", 
+            self::META_SYS_COLLECTOR_TABLE_NAME, 
+            $collectorName
+        );
+
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        $result = $conn->withDefaultDb(self::META_DB_NAME)
+                      ->query($tdSql);
+
+        if ($result->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $result->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+        if ($result->rowsAffected() == 0) {
+            return null;
+        }
+
+        $collectors = CollectorParser::parseCollectors($result);
+
+        return $collectors[0];
 
     }
 

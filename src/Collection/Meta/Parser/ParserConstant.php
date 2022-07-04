@@ -13,4 +13,6 @@ class ParserConstant {
 
     const STORE_CREATE_METHOD_NAME = "createStore";
 
+    const COLLECTOR_CREATE_METHOD_NAME = "createCollector";
+
 }

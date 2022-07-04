@@ -151,4 +151,31 @@ class CollectionMetaTest extends TestCase {
         $this->assertEquals(0,0);
     }
 
+    public function testSearchCollector_WithMock() {
+        $client = $this->createMock(HttpClient::class);
+
+        $client->expects(exactly(2))
+            ->method('send')
+            ->willReturnOnConsecutiveCalls(
+                //连接登录
+                json_decode('{"status":"succ","code":0,"desc":"/KfeAzX/f9na8qdtNZmtONryp201ma04bEl8LcvLUd7a8qdtNZmtONryp201ma04"}', false),
+                //查询基本信息的结果
+                json_decode('{"status":"succ","head":["collector_name","class_type","desc"],"column_meta":[["collector_name",8,128],["class_type",8,200],["desc",10,200]],"data":[["BaseCollectorTest_1","WztzTech||Iot||PhpTd||Collection||BaseCollector","测试注册基础Collector"],["DemoCollector_Test_1","WztzTech||Iot||PhpTd||Collection||Demo||CollectorDemo","测试其他类型的Collector"]],"rows":2}', false),
+            );
+
+        $meta = CollectionMeta::getMetaAgent($client);
+
+        $collectors = $meta->searchCollector();
+
+        $this->assertCount(2, $collectors);
+
+        $this->assertEquals('BaseCollectorTest_1', $collectors[0]->getName());
+        $this->assertEquals('DemoCollector_Test_1', $collectors[1]->getName());
+
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Demo\\CollectorDemo", $collectors[1]);
+
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\BaseCollector", $collectors[0]);
+
+    }
+
 }
