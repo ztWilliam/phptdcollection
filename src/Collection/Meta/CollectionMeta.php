@@ -263,10 +263,12 @@ class CollectionMeta {
     public function searchCollector(String $collectorNameLike = '', int $page = 0, int $pageSize = 20) : array {
         $offset = $page * $pageSize;
 
+        $like = '%' . $collectorNameLike . '%';
+
         $tdSql = sprintf("SELECT DISTINCT `collector_name`, `class_type`, `desc` 
-            FROM `%s` WHERE `collector_name` LIKE '\%%s\%' LIMIT %d OFFSET %d ", 
+            FROM `%s` WHERE `collector_name` LIKE '%s' LIMIT %d OFFSET %d ", 
             self::META_SYS_COLLECTOR_TABLE_NAME, 
-            $collectorNameLike, $pageSize, $offset
+            $like, $pageSize, $offset
         );
 
         $conn = $this->tdManager->getConnection([], $this->_client);

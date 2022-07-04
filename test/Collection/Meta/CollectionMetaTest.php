@@ -178,4 +178,38 @@ class CollectionMetaTest extends TestCase {
 
     }
 
+    public function testSearchCollector_WithoutMock() {
+        $meta = CollectionMeta::getMetaAgent();
+
+        $collectors = $meta->searchCollector();
+
+        $this->assertCount(2, $collectors);
+
+        $this->assertEquals('BaseCollectorTest_1', $collectors[0]->getName());
+        $this->assertEquals('DemoCollector_Test_1', $collectors[1]->getName());
+
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Demo\\CollectorDemo", $collectors[1]);
+
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\BaseCollector", $collectors[0]);
+
+        $collectors = $meta->searchCollector('SomethingNotExists');
+        $this->assertCount(0, $collectors);
+    }
+
+    public function testCollectorInfo_WithoutMock() {
+        $meta = CollectionMeta::getMetaAgent();
+
+        $collector = $meta->collectorInfo('DemoCollector_Test_1');
+
+        $this->assertNotNull($collector);
+
+        $this->assertEquals('DemoCollector_Test_1', $collector->getName());
+
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Demo\\CollectorDemo", $collector);
+
+        $collector = $meta->collectorInfo('SomethingNotExists');
+        $this->assertNull($collector);
+
+    }
+
 }
