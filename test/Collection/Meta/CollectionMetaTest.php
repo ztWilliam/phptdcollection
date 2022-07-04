@@ -5,6 +5,7 @@ use PhpParser\ErrorHandler\Collecting;
 use PHPUnit\Framework\TestCase;
 use WztzTech\Iot\PhpTd\Collection\BaseCollectionStore;
 use WztzTech\Iot\PhpTd\Collection\BaseCollector;
+use WztzTech\Iot\PhpTd\Collection\Demo\CollectorDemo;
 use WztzTech\Iot\PhpTd\Collection\Demo\StoreDemo;
 use WztzTech\Iot\PhpTd\Collection\Meta\CollectionMeta;
 use WztzTech\Iot\PhpTd\Connector\TdConnectionManager;
@@ -121,23 +122,30 @@ class CollectionMetaTest extends TestCase {
 
         $stores = $meta->allStores();
 
-        $this->assertArrayHasKey('store_BaseStore_1', $stores[0]);
-        $this->assertArrayHasKey('store_DemoStore_1', $stores[0]);
-        $this->assertArrayHasKey('store_BaseStore_1', $stores[1]);
-        $this->assertArrayHasKey('store_DemoStore_1', $stores[1]);
+        $this->assertArrayHasKey('BaseStore_1', $stores[0]);
+        $this->assertArrayHasKey('DemoStore_1', $stores[0]);
+        $this->assertArrayHasKey('BaseStore_1', $stores[1]);
+        $this->assertArrayHasKey('DemoStore_1', $stores[1]);
 
-        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Demo\\StoreDemo", $stores[0]['store_DemoStore_1']);
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Demo\\StoreDemo", $stores[0]['DemoStore_1']);
 
-        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Meta\\Analyzer\\StoreCounterData", $stores[1]['store_BaseStore_1']);
+        $this->assertInstanceOf("WztzTech\\Iot\\PhpTd\\Collection\\Meta\\Analyzer\\StoreCounterData", $stores[1]['BaseStore_1']);
 
     }
 
     public function testRegisterCollector_WithoutMock() {
         $collector = BaseCollector::createCollector('BaseCollectorTest_1', '测试注册基础Collector');
 
+        $collector_demo = CollectorDemo::createCollector('DemoCollector_Test_1', '测试其他类型的Collector');
+
         $meta = CollectionMeta::getMetaAgent();
 
         $meta->registerCollector($collector);
+
+        //只要不报错就行：
+        $this->assertEquals(0,0);
+
+        $meta->registerCollector($collector_demo);
 
         //只要不报错就行：
         $this->assertEquals(0,0);

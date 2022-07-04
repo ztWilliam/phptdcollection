@@ -99,11 +99,12 @@ class CollectionMeta {
      */
     public function registerStore( ICollectionStore $store ) : int {
         //利用 $store 的 名字 作为表名、classtype、desc 作为tags，创建 sys_store 的子表：
-        $tableName = ParserConstant::PREFIX_STORE_TABLE . $store->getName();
+        $storeName = $store->getName();
+        $tableName = ParserConstant::PREFIX_STORE_TABLE . $storeName;
         $classType = str_replace(ParserConstant::CLASS_TYPE_SEPARATOR, ParserConstant::CLASS_TYPE_SEPARATOR_REPLACE, get_class($store));
         $desc = $store->getDesc();
 
-        if (empty($store->getName())) {
+        if (empty($storeName)) {
             throw new PhpTdException(
                 sprintf(ErrorMessage::PARAM_OR_FIELD_EMPTY_ERR_MESSAGE, 'Store Name'),
                 ErrorCode::PARAM_OR_FIELD_EMPTY_ERR
@@ -120,7 +121,7 @@ class CollectionMeta {
 
         //创建新 store 表：
         try {
-            $this->createStoreTable($tableName, $classType, $desc);
+            $this->createStoreTable($storeName, $classType, $desc);
 
         } catch (\Throwable $ex) {
             throw new PhpTdException(
@@ -155,6 +156,8 @@ class CollectionMeta {
     public function registerCollector( ICollector $collector ) {
         $collectorName = $collector->getName();
 
+        // echo PHP_EOL . '注册 ' . $collectorName . ' 开始' . PHP_EOL;
+
         if (empty($collectorName)) {
             throw new PhpTdException(
                 sprintf(ErrorMessage::PARAM_OR_FIELD_EMPTY_ERR_MESSAGE, 'Collector Name'),
@@ -185,6 +188,8 @@ class CollectionMeta {
             );
         }
 
+        // echo PHP_EOL . '注册 ' . $collectorName . ' 结束' . PHP_EOL;
+
     }
 
     public function registerPoint( ICollectionPoint $point ) {
@@ -203,7 +208,7 @@ class CollectionMeta {
         $conn = $this->tdManager->getConnection([], $this->_client);
 
         //先查询所有 store 的基本信息（Tag字段）
-        $baseSql = sprintf("SELECT `store_name`, `class_type`, `desc` FROM `%s`", self::META_SYS_STORE_TABLE_NAME);
+        $baseSql = sprintf("SELECT DISTINCT `store_name`, `class_type`, `desc` FROM `%s`", self::META_SYS_STORE_TABLE_NAME);
 
         $baseResult = $conn->withDefaultDb(self::META_DB_NAME)
                         ->query($baseSql);
@@ -387,7 +392,9 @@ class CollectionMeta {
      * dataFields: counting_time   point_count  collector_count  data_count   data_size
      * 
      */
-    private function createStoreTable(String $tableName, String $classType, String $desc) {
+    private function createStoreTable(String $storeName, String $classType, String $desc) {
+        $tableName = ParserConstant::PREFIX_STORE_TABLE . $storeName;
+
         $conn = $this->tdManager->getConnection([], $this->_client);
 
         $tdSql = sprintf(
@@ -396,7 +403,7 @@ class CollectionMeta {
             (counting_time, point_count, collector_count, data_count, data_size) VALUES (%d, %d, %d, %d, %d)", 
             $tableName,
             self::META_SYS_STORE_TABLE_NAME,
-            $tableName, $classType, $desc,
+            $storeName, $classType, $desc,
             TimeUtil::getMiliSeconds(),
             0, 0, 0, 0
         );
