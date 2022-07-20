@@ -26,5 +26,6 @@ class ErrorMessage {
 
     const PARAM_OR_FIELD_EMPTY_ERR_MESSAGE = "【%s】不能为空";
 
+    const BASE_OBJECT_NOT_FOUND_ERR_MESSAGE = "【%s】的 %s 记录不存在";
 
 }

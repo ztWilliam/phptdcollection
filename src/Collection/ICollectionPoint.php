@@ -16,19 +16,20 @@ interface ICollectionPoint {
      * 该采集点应为“未注册”状态。
      * 
      * @param String $name 采集点的名称
-     * @param array $tags 该采集点的 tag 值，以 tagFieldName 为键，以 tagFieldValue 为值，tagFields 应属于要绑定的采集器的tags。
      * @param String $desc 该采集点的描述信息
      * @param ICollector $bindCollector 要绑定的采集器
      * @param ICollectionStore $store 该采集点的数据应存储于哪个库中
+     * @param array $tags 该采集点的 tag 值，以 tagFieldName 为键，以 tagFieldValue 为值，tagFields 应属于要绑定的采集器的tags。
      * 
      * @return ICollectionPoint
      */
     public static function createPoint(
         String $name,
-        array $tags, 
         String $desc = '', 
         ICollector $bindCollector, 
-        ICollectionStore $store = null) : ICollectionPoint ;
+        ICollectionStore $store = null,
+        array $tags = [] 
+        ) : ICollectionPoint ;
 
     /**
      * 注册本采集点。
@@ -53,9 +54,24 @@ interface ICollectionPoint {
     public static function createByKey(String $key) : ICollectionPoint;
 
     /**
+     * 获得该采集点的名称
+     */
+    public function getName() : String;
+
+    /**
+     * 获得该采集点的描述信息
+     */
+    public function getDesc() : String;
+
+    /**
      * 获取采集点的 key
      */
     public function getKey() : String;
+
+    /**
+     * 设置采集点的 key
+     */
+    public function setKey(String $key);
 
     /**
      * 获取采集点绑定的采集器
@@ -100,7 +116,7 @@ interface ICollectionPoint {
      * 这些涉及安全的选项通常由应用程序自行管理，不能写死在代码中，也不应存储在数据库中（至少不能明码存储），
      * 所以通常只能在运行时，由更高层的应用程序传入这些选项。
      * 
-     * 具体每个采集点的安全选项有哪些，是由采集点绑定的采集器的采集逻辑决定的。
+     * 具体每个采集点的安全选项有哪些，是由采集点所绑定的采集器（即 ICollector 的具体实现类）的采集逻辑决定的。
      * 
      * @param array $options 以隐私选项的key为键，以隐私选项的取值（只能是字符串类型）为值的数组
      * 

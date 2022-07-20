@@ -15,4 +15,7 @@ class ParserConstant {
 
     const COLLECTOR_CREATE_METHOD_NAME = "createCollector";
 
+    const POINT_CREATE_METHOD_NAME = "createPoint";
+
+
 }

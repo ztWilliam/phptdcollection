@@ -9,9 +9,9 @@ use WztzTech\Iot\PhpTd\Exception\ErrorCode;
 use WztzTech\Iot\PhpTd\Exception\ErrorMessage;
 use WztzTech\Iot\PhpTd\Exception\PhpTdException;
 use WztzTech\Iot\PhpTd\Exception\TdException;
-use WztzTech\Iot\PhpTd\Util\{HttpClient, TimeUtil};
+use WztzTech\Iot\PhpTd\Util\{HttpClient, IDGenerator, TimeUtil};
 
-use WztzTech\Iot\PhpTd\Collection\Meta\Parser\{CollectorParser, ParserConstant, StoreParser};
+use WztzTech\Iot\PhpTd\Collection\Meta\Parser\{CollectorParser, ParserConstant, PointParser, StoreParser};
 
 /**
  * 所有Store、Collector、Points的信息，注册后的元数据均由 CollectionMeta 负责管理
@@ -192,7 +192,40 @@ class CollectionMeta {
 
     }
 
-    public function registerPoint( ICollectionPoint $point ) {
+    /**
+     * 注册采集点信息，并为该采集点分配一个唯一的标识 key
+     * 
+     * @param ICollectionPoint &$point 要注册的采集点，按引用传递的对象，因为分配好唯一标识后，会写入该对象中。
+     * 
+     */
+    public function registerPoint( ICollectionPoint &$point ) {
+        //检查 采集点 所在的 store 中，有没有重名的采集点
+        $pointName = $point->getName();
+
+        if(empty($pointName)) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::PARAM_OR_FIELD_EMPTY_ERR_MESSAGE, 'Point Name'),
+                ErrorCode::PARAM_OR_FIELD_EMPTY_ERR
+            );
+        }
+
+        $store = $point->getStore();
+
+        $tableName = ParserConstant::PREFIX_POINT_TABLE . $store->getName() . '_' . $pointName;
+
+        if ($this->tableExists($tableName)) {
+            throw new PhpTdException(
+                sprintf(ErrorMessage::NAME_EXISTS_ERR_MESSAGE, $pointName),
+                ErrorCode::NAME_EXISTS_ERR
+            );
+        }
+
+        //为采集点分配一个唯一标识 key，并赋值到 $point 中
+        $pointKey = IDGenerator::uniqID32();
+        $point->setKey($pointKey);
+
+        //创建采集点的表
+        $this->createPointTable($point, $tableName);
 
     }
 
@@ -243,6 +276,46 @@ class CollectionMeta {
 
             return [$stores, $storeInfos];
 
+        } catch (\Throwable $ex) {
+            throw new PhpTdException(
+                $ex->getMessage()
+            );
+        }
+    }
+
+    /**
+     * 根据 store 的 name，返回名称相符的 ICollectionStore 实例。
+     * 
+     * @param String $name
+     * 
+     */
+    public function storeInfo(String $name) : ICollectionStore {
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        //先查询所有 store 的基本信息（Tag字段）
+        $baseSql = sprintf(
+            "SELECT DISTINCT `store_name`, `class_type`, `desc` FROM `%s` WHERE `store_name` = '%s' ", 
+            self::META_SYS_STORE_TABLE_NAME, $name);
+
+        $baseResult = $conn->withDefaultDb(self::META_DB_NAME)
+                        ->query($baseSql);
+
+        if ($baseResult->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $baseResult->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+        if ($baseResult->rowsAffected() == 0) {
+            return null;
+        }
+                
+        try {
+            //将查询结果交给 parser，获得结果数组
+            $stores = StoreParser::parseStore($baseResult);
+            return $stores[0];
+            
         } catch (\Throwable $ex) {
             throw new PhpTdException(
                 $ex->getMessage()
@@ -325,7 +398,62 @@ class CollectionMeta {
 
     }
 
-    public function pointInfo(String $pointKey) {
+    public function searchPoints(String $pointNameLike, String $storeName = '', int $page = 0, int $pageSize = 100) : array {
+        $offset = $page * $pageSize;
+
+        $like = '%' . $pointNameLike . '%';
+
+        $storeCondition = empty($storeName) ? '' : sprintf(" AND `store` = '%s' ", $storeName);
+
+        $tdSql = sprintf("SELECT DISTINCT `point_name`, `store`, `collector`, `class_type`, `desc`, `point_key` 
+            FROM `%s` WHERE `point_name` LIKE '%s' %s LIMIT %d OFFSET %d ", 
+            self::META_SYS_POINTS_TABLE_NAME, 
+            $like, $storeCondition, $pageSize, $offset
+        );
+
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        $result = $conn->withDefaultDb(self::META_DB_NAME)
+                      ->query($tdSql);
+
+        if ($result->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $result->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+        $points = PointParser::parsePoints($result, $this);
+
+        return $points;
+
+    }
+
+    public function pointInfo(String $pointKey) : ICollectionPoint {
+        $tdSql = sprintf("SELECT DISTINCT `point_name`, `store`, `collector`, `class_type`, `desc`, `point_key` 
+            FROM `%s` WHERE `point_key` = '%s' ", 
+            self::META_SYS_POINTS_TABLE_NAME, $pointKey
+        );
+
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        $result = $conn->withDefaultDb(self::META_DB_NAME)
+                      ->query($tdSql);
+
+        if ($result->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $result->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+        if ($result->rowsAffected() == 0) {
+            return null;
+        }
+
+        $points = PointParser::parsePoints($result, $this);
+
+        return $points[0];
 
     }
 
@@ -505,6 +633,50 @@ class CollectionMeta {
             $collectorName, $classType, $desc,
             TimeUtil::getMiliSeconds(),
             0, 0, 0, null
+        );
+
+        $result = $conn->withDefaultDb(self::META_DB_NAME)
+                        ->exec($tdSql);
+
+        if ($result->hasError()) {
+            throw new TdException(
+                sprintf(ErrorMessage::TD_TAOS_SQL_EXECUTE_FAILED_ERR_MESSAGE, $result->getDesc()),
+                ErrorCode::TD_TAOS_SQL_EXECUTE_FAILED_ERR
+            );
+        }
+
+    }
+
+    /**
+     * 
+     * sys_points_in_store 用于存放所有 采集点 信息的超级表， 每个 采集点 对应一个子表
+     * tags: point_name  store  collector  desc    class_type   point_key
+     * dataFields: counting_time   data_count   data_size   recently_data_time
+     * 
+     */
+    private function createPointTable(ICollectionPoint $point, String $tableName) {
+
+        $store = $point->getStore();
+        $collector = $point->getCollector();
+
+        $pointName = $point->getName();
+        $pointDesc = $point->getDesc();
+        $classType = str_replace(ParserConstant::CLASS_TYPE_SEPARATOR, ParserConstant::CLASS_TYPE_SEPARATOR_REPLACE, get_class($point));
+        $pointKey = $point->getKey();
+        $storeName = $store->getName();
+        $collectorName = $collector->getName();
+
+        $conn = $this->tdManager->getConnection([], $this->_client);
+
+        $tdSql = sprintf(
+            "INSERT INTO `%s` USING `%s` 
+            (`point_name`, `store`, `collector`, `desc`, `class_type`, `point_key`) TAGS ('%s', '%s', '%s', '%s', '%s', '%s') 
+            (`counting_time`, `data_count`, `data_size`, `recently_data_time`) VALUES (%d, %d, %d, %d)", 
+            $tableName,
+            self::META_SYS_POINTS_TABLE_NAME,
+            $pointName, $storeName, $collectorName, $pointDesc, $classType, $pointKey,
+            TimeUtil::getMiliSeconds(),
+            0, 0, null
         );
 
         $result = $conn->withDefaultDb(self::META_DB_NAME)

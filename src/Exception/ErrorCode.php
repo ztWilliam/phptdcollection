@@ -27,5 +27,7 @@ class ErrorCode {
 
     const META_REGISTER_FAILED_ERR = -601;
 
+    const BASE_OBJECT_NOT_FOUND_ERR = -1404;
+
 
 }
