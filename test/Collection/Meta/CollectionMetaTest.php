@@ -3,6 +3,7 @@ namespace WztzTech\Iot\PhpTd\Test\Collection\Meta;
 
 use PhpParser\ErrorHandler\Collecting;
 use PHPUnit\Framework\TestCase;
+use WztzTech\Iot\PhpTd\Collection\BaseCollectionPoint;
 use WztzTech\Iot\PhpTd\Collection\BaseCollectionStore;
 use WztzTech\Iot\PhpTd\Collection\BaseCollector;
 use WztzTech\Iot\PhpTd\Collection\Demo\CollectorDemo;
@@ -209,6 +210,32 @@ class CollectionMetaTest extends TestCase {
 
         $collector = $meta->collectorInfo('SomethingNotExists');
         $this->assertNull($collector);
+
+    }
+
+    public function testPointRegister_WithoutMock() {
+        $meta = CollectionMeta::getMetaAgent();
+
+        //利用前面测试创建的store 和 collector
+        $store = $meta->storeInfo('DemoStore_1');
+        $collector = $meta->collectorInfo('DemoCollector_Test_1');
+
+        //创建一个新 point
+        $point = BaseCollectionPoint::createPoint('TestBasePoint001', '用于测试的基本点位', 
+            $collector, $store, 
+            ['Tag1' => 'TagValue1']);
+
+        $this->assertEmpty($point->getKey());
+        
+        $meta->registerPoint($point);
+
+        $newKey = $point->getKey();
+
+        $this->assertNotEmpty($newKey);
+
+        $registeredPoint = $meta->pointInfo($newKey);
+
+        $this->assertEquals('TestBasePoint001', $registeredPoint->getName());
 
     }
 

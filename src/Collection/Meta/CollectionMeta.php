@@ -314,7 +314,8 @@ class CollectionMeta {
         try {
             //将查询结果交给 parser，获得结果数组
             $stores = StoreParser::parseStore($baseResult);
-            return $stores[0];
+
+            return $stores[$name];
             
         } catch (\Throwable $ex) {
             throw new PhpTdException(

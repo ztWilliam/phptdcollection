@@ -1,7 +1,6 @@
 <?php
 namespace WztzTech\Iot\PhpTd\Collection;
 
-use Error;
 use WztzTech\Iot\PhpTd\Collection\Meta\{CollectionMeta, ColumnMeta};
 use WztzTech\Iot\PhpTd\Exception\ErrorCode;
 use WztzTech\Iot\PhpTd\Exception\ErrorMessage;
@@ -12,7 +11,7 @@ class BaseCollectionPoint implements ICollectionPoint {
     protected String $_name;
     protected String $_desc;
 
-    protected String $_key;
+    protected String $_key = '';
 
     protected ICollector $_collector;
 
@@ -33,6 +32,13 @@ class BaseCollectionPoint implements ICollectionPoint {
         array $tags = [] 
     )
     {
+        $this->_name = $name;
+        $this->_desc = $desc;
+
+        $this->_collector = $bindCollector;
+        $this->_store = $store;
+
+        $this->_tags = array_merge($tags);
         
     }
 
@@ -180,9 +186,7 @@ class BaseCollectionPoint implements ICollectionPoint {
      * @return ICollectionPoint 返回当前实例
      */
     public function withData(array $values) : ICollectionPoint {
-        for ($i = 0; $i < count($values); $i++) {
-            array_push($this->_data, $values[$i]);
-        }
+        $this->_data = array_merge($this->_data, $values);
 
         return $this;
     }
